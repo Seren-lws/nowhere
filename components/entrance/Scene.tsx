@@ -10,6 +10,7 @@ import {
 } from "motion/react";
 import {
   ENTERING_FLAG,
+  FLOOD_GRADIENT,
   FLOOR_PLAN_ROUTE,
   STAGE_ASPECT,
   TIMELINE,
@@ -23,12 +24,12 @@ import { useParallax } from "./hooks/useParallax";
 import { useTimeOfDay } from "./hooks/useTimeOfDay";
 import { useHaptics } from "./hooks/useHaptics";
 
-/** 各时间档的门洞暖光中心色 */
+/** 各时间档的门洞暖光中心色（奶油暖调、低饱和） */
 const WARM_BY_TOD = {
-  dawn: "rgba(255,212,150,1)",
-  day: "rgba(255,214,156,1)",
-  dusk: "rgba(255,192,112,1)",
-  night: "rgba(255,182,98,1)",
+  dawn: "rgba(248,234,214,1)",
+  day: "rgba(250,236,216,1)",
+  dusk: "rgba(246,226,200,1)",
+  night: "rgba(242,224,198,1)",
 } as const;
 
 export function Scene() {
@@ -146,10 +147,7 @@ export function Scene() {
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(120% 90% at 50% 55%, rgba(255,224,170,1) 0%, rgba(255,200,120,1) 45%, rgba(255,180,90,1) 100%)",
-        }}
+        style={{ background: FLOOD_GRADIENT }}
         variants={floodVariants}
         initial="hidden"
         animate={opening ? "open" : "hidden"}

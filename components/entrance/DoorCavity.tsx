@@ -1,12 +1,18 @@
 "use client";
 
 import { motion, type Variants } from "motion/react";
-import { CAVITY_INSET_PX, DOOR, TIMELINE, boxToStyle } from "@/lib/entrance/layout";
+import {
+  CAVITY_DARK,
+  CAVITY_INSET_PX,
+  DOOR,
+  TIMELINE,
+  boxToStyle,
+} from "@/lib/entrance/layout";
 
 /**
- * L2 门洞黑底 + L3 门洞光。垫在门扇之下，门开后露出。
- * - L2：与门扇同位同尺寸的纯黑矩形，四边各向内收 CAVITY_INSET_PX 防露边。
- * - L3：暖黄径向渐变 + 模糊 + 呼吸；推门时向外扩散并增亮。色温可随时间联动。
+ * L2 门洞暗底 + L3 门洞光。垫在门扇之下，门开后露出。
+ * - L2：与门扇同位同尺寸的柔和暗色矩形（非死黑），四边各向内收 CAVITY_INSET_PX 防露边。
+ * - L3：奶油暖光径向渐变 + 模糊 + 呼吸；推门时向外扩散并增亮。低饱和、低对比。
  */
 
 const lightVariants: Variants = {
@@ -34,21 +40,21 @@ interface DoorCavityProps {
 
 export function DoorCavity({
   opening,
-  warm = "rgba(255, 196, 120, 1)",
+  warm = "rgba(248, 232, 208, 1)",
 }: DoorCavityProps) {
   return (
     <div className="absolute" style={boxToStyle(DOOR)}>
-      {/* L2 黑底 */}
+      {/* L2 柔和暗底 */}
       <div
-        className="absolute rounded-[10%/4%] bg-black"
-        style={{ inset: `${CAVITY_INSET_PX}px` }}
+        className="absolute rounded-[10%/4%]"
+        style={{ inset: `${CAVITY_INSET_PX}px`, background: CAVITY_DARK }}
       />
-      {/* L3 门洞光：呼吸（idle）→ 扩散（open） */}
+      {/* L3 门洞光：呼吸（idle）→ 扩散（open）。奶油暖调、低饱和 */}
       <motion.div
         aria-hidden
         className="absolute inset-0 rounded-[10%/4%]"
         style={{
-          background: `radial-gradient(60% 55% at 50% 60%, ${warm} 0%, rgba(255,170,90,0.55) 38%, rgba(255,150,70,0) 72%)`,
+          background: `radial-gradient(62% 56% at 50% 60%, ${warm} 0%, rgba(238,218,192,0.5) 40%, rgba(232,212,190,0) 74%)`,
           filter: "blur(6px)",
         }}
         variants={lightVariants}

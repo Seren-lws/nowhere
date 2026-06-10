@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ENTERING_FLAG, TIMELINE } from "@/lib/entrance/layout";
+import { ENTERING_FLAG, FLOOD_GRADIENT, TIMELINE } from "@/lib/entrance/layout";
 
 /**
  * 平面图 · Floor Plan（占位 —— 另单实现）
@@ -37,10 +37,7 @@ export default function FloorPlanPage() {
         <motion.div
           aria-hidden
           className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 50% 55%, rgba(255,224,170,1) 0%, rgba(255,200,120,1) 45%, rgba(255,180,90,1) 100%)",
-          }}
+          style={{ background: FLOOD_GRADIENT }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: TIMELINE.recede.duration / 1000, ease: "easeOut" }}
