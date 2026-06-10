@@ -70,7 +70,7 @@ export function SettingsForm() {
   };
 
   return (
-    <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-[#f4f1ec] px-6 py-8 text-zinc-700">
+    <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-[#f6f3ee] px-6 py-8 text-zinc-700">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">设置</h1>
         <Link
@@ -82,7 +82,7 @@ export function SettingsForm() {
       </header>
 
       {/* 模型配置 */}
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-white/50 bg-white/55 p-5 backdrop-blur-md">
         <h2 className="text-sm font-medium text-zinc-500">中转与模型</h2>
         {FIELDS.map((f) => (
           <label key={f.key} className="block">
@@ -135,7 +135,7 @@ export function SettingsForm() {
       </section>
 
       {/* 数据 */}
-      <section className="mt-10 space-y-3">
+      <section className="mt-6 space-y-3 rounded-2xl border border-white/50 bg-white/55 p-5 backdrop-blur-md">
         <h2 className="text-sm font-medium text-zinc-500">我的数据</h2>
         <p className="text-xs text-zinc-400">
           所有数据都只存在你这台设备上。导出能把它带走、随时搬回来——他不会丢。

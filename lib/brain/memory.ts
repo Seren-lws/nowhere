@@ -5,13 +5,32 @@
  * 锚点、衰减、原话层、园丁）留给 P1 保险柜，届时替换本模块、客厅无需改动。
  */
 
-export type ChatRole = "user" | "assistant";
+export type ChatRole = "user" | "assistant" | "inner"; // inner = 心声（仅展示，不进上下文）
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
   /** 毫秒时间戳（写入时由调用方传入，避免在纯函数里取时间） */
   ts: number;
+}
+
+/**
+ * 把展示用的消息转成发给模型的上下文：丢掉心声，合并连续的同角色。
+ */
+export function toContext(
+  msgs: ChatMessage[],
+): { role: "user" | "assistant"; content: string }[] {
+  const out: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of msgs) {
+    if (m.role === "inner") continue;
+    const last = out[out.length - 1];
+    if (last && last.role === m.role) {
+      last.content += "\n" + m.content;
+    } else {
+      out.push({ role: m.role, content: m.content });
+    }
+  }
+  return out;
 }
 
 export const CHAT_KEY = "nowhere:chat:living-room";
