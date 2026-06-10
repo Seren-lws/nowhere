@@ -87,41 +87,69 @@ export function LivingRoom() {
   };
 
   return (
-    <main className="flex h-[100dvh] flex-col bg-[#f6f3ee] text-zinc-700">
+    <main
+      className="flex h-[100dvh] flex-col"
+      style={{ background: "var(--bg-gradient)", color: "var(--text-deep)" }}
+    >
       {/* 顶栏 */}
-      <header className="flex items-center justify-between border-b border-black/5 bg-white/45 px-5 py-3 backdrop-blur-md">
-        <Link href="/floor-plan" className="text-sm text-zinc-400 hover:text-zinc-600">
-          ‹ 回家
+      <header
+        className="flex items-center justify-between px-5 py-4"
+        style={{
+          background: "rgba(249,242,244,.88)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(232,196,196,.1)",
+        }}
+      >
+        <Link
+          href="/floor-plan"
+          className="flex items-center gap-0.5 text-[13px] transition-opacity hover:opacity-70"
+          style={{ color: "var(--accent-dusk)", letterSpacing: "1px" }}
+        >
+          ‹ 回房间
         </Link>
         <div className="flex flex-col items-center leading-tight">
           <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
-            <span className="text-[15px] font-medium tracking-tight text-zinc-700">
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: "var(--accent-wisteria)", boxShadow: "0 0 6px rgba(138,125,165,.6)" }}
+            />
+            <span
+              className="text-[16px] font-medium"
+              style={{ letterSpacing: "2px", color: "var(--text-deep)" }}
+            >
               {DEFAULT_NAME}
             </span>
           </div>
-          <span className="max-w-[160px] truncate text-[10px] text-zinc-400">
+          <span
+            className="max-w-[180px] truncate text-[10px]"
+            style={{ color: "var(--text-faint)", letterSpacing: ".5px" }}
+          >
             {settings?.chatModel || "在线"}
           </span>
         </div>
         <Link
           href="/settings"
           aria-label="设置"
-          className="text-zinc-400 transition hover:rotate-45 hover:text-zinc-600"
+          className="transition-all hover:rotate-45"
+          style={{ color: "var(--accent-dusk)" }}
         >
           <Gear />
         </Link>
       </header>
 
       {/* 消息区 */}
-      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-6">
+      <div className="flex-1 space-y-1 overflow-y-auto px-5 py-6">
         {messages.map((m) => (
           <Bubble key={m.ts} role={m.role} content={m.content} />
         ))}
 
         {sending && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl rounded-bl-md bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm">
+          <div className="flex justify-start pt-2">
+            <div
+              className="rounded-2xl rounded-bl-md px-4 py-3"
+              style={{ background: "var(--bubble-them)" }}
+            >
               <span className="inline-flex gap-1">
                 <Dot /> <Dot delay={0.15} /> <Dot delay={0.3} />
               </span>
@@ -130,36 +158,54 @@ export function LivingRoom() {
         )}
 
         {!ready && (
-          <div className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-zinc-500 backdrop-blur-sm">
-            还没接上他的大脑～点右上角的
-            <Link href="/settings" className="mx-1 text-violet-500 underline">
-              ⚙ 设置
-            </Link>
-            填好中转站、API Key 和对话模型，他就能开口了。
+          <div
+            className="rounded-2xl px-4 py-3 text-[13px]"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--card-border)",
+              boxShadow: "var(--card-shadow)",
+              color: "var(--text-mid)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            还没接上他的大脑～点右上角的齿轮，填好中转站、API Key 和对话模型，他就能开口了。
           </div>
         )}
         {error && (
-          <div className="rounded-2xl bg-rose-50/80 px-4 py-3 text-sm text-rose-500 backdrop-blur-sm">
+          <div
+            className="rounded-xl px-4 py-3 text-[13px]"
+            style={{
+              background: "rgba(200,140,140,.06)",
+              border: "1px solid rgba(200,140,140,.2)",
+              color: "#b07070",
+            }}
+          >
             {error}
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* 方式切换 */}
-      <div className="flex justify-center pb-1.5">
-        <div className="flex rounded-full bg-white/50 p-0.5 text-xs backdrop-blur-sm">
-          <ModeTab active={mode === "sentences"} onClick={() => setMode("sentences")}>
-            一句一句说
-          </ModeTab>
-          <ModeTab active={mode === "passage"} onClick={() => setMode("passage")}>
-            写成一篇
-          </ModeTab>
-        </div>
+      {/* 方式切换（胶囊 Tab） */}
+      <div className="flex justify-center gap-1.5 pb-2">
+        <PillTab active={mode === "sentences"} onClick={() => setMode("sentences")}>
+          一句一句说
+        </PillTab>
+        <PillTab active={mode === "passage"} onClick={() => setMode("passage")}>
+          写成一篇
+        </PillTab>
       </div>
 
       {/* 输入栏 */}
-      <div className="border-t border-black/5 bg-white/45 px-4 py-3 backdrop-blur-md">
+      <div
+        className="px-4 pb-4 pt-2"
+        style={{
+          background: "rgba(249,242,244,.88)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderTop: "1px solid rgba(232,196,196,.1)",
+        }}
+      >
         <div className="flex items-end gap-2">
           <textarea
             value={input}
@@ -173,13 +219,32 @@ export function LivingRoom() {
             rows={1}
             placeholder={ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
             disabled={!ready || sending}
-            className="max-h-32 flex-1 resize-none rounded-2xl border border-black/10 bg-white/80 px-4 py-2.5 text-[15px] outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-200/50 disabled:opacity-60"
+            className="max-h-32 flex-1 resize-none px-4 py-2.5 text-[14px] outline-none transition-all disabled:opacity-60"
+            style={{
+              borderRadius: 12,
+              border: "1px solid var(--input-border)",
+              background: "var(--input-bg)",
+              color: "var(--text-deep)",
+              fontFamily: "inherit",
+              lineHeight: 1.7,
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
           />
           <button
             type="button"
             onClick={send}
             disabled={!ready || sending || !input.trim()}
-            className="rounded-2xl bg-violet-300/80 px-5 py-2.5 text-sm font-medium text-violet-950 transition hover:bg-violet-300 disabled:opacity-40"
+            className="px-6 py-2.5 text-[14px] transition-all disabled:opacity-40"
+            style={{
+              borderRadius: 14,
+              border: "none",
+              background: "linear-gradient(135deg, var(--blush) 0%, var(--accent-wisteria) 100%)",
+              color: "rgba(255,255,255,.95)",
+              letterSpacing: "2px",
+              boxShadow: "0 2px 10px rgba(196,160,170,.2)",
+              cursor: "pointer",
+            }}
           >
             说
           </button>
@@ -195,10 +260,18 @@ function Bubble({ role, content }: { role: ChatMessage["role"]; content: string 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="flex justify-end"
+        transition={{ duration: 0.35 }}
+        className="flex justify-end py-1 pl-9"
       >
-        <div className="max-w-[78%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-gradient-to-br from-violet-200/80 to-violet-300/70 px-4 py-2.5 text-[15px] leading-relaxed text-violet-950">
+        <div
+          className="max-w-full whitespace-pre-wrap rounded-2xl rounded-br-md px-4 py-2.5 text-[14.5px]"
+          style={{
+            background: "var(--bubble-me)",
+            color: "rgba(255,255,255,.96)",
+            lineHeight: 1.75,
+            letterSpacing: ".3px",
+          }}
+        >
           {content}
         </div>
       </motion.div>
@@ -209,14 +282,26 @@ function Bubble({ role, content }: { role: ChatMessage["role"]; content: string 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex justify-start"
+        transition={{ duration: 0.45 }}
+        className="flex justify-start py-1 pr-9"
       >
-        <div className="max-w-[82%] rounded-2xl rounded-bl-md bg-zinc-200/40 px-4 py-2.5 backdrop-blur-sm">
-          <span className="mb-0.5 block text-[11px] text-zinc-400">心声</span>
-          <span className="whitespace-pre-wrap text-[14px] italic leading-relaxed text-zinc-400">
-            {content}
+        <div
+          className="max-w-full px-4 py-2.5 text-[12px] italic"
+          style={{
+            background: "var(--thought-bg)",
+            borderLeft: "2px solid var(--thought-border)",
+            borderRadius: 12,
+            color: "var(--text-mid)",
+            lineHeight: 1.65,
+          }}
+        >
+          <span
+            className="mr-1.5 not-italic"
+            style={{ color: "var(--text-faint)", letterSpacing: "1px" }}
+          >
+            心声
           </span>
+          {content}
         </div>
       </motion.div>
     );
@@ -226,16 +311,24 @@ function Bubble({ role, content }: { role: ChatMessage["role"]; content: string 
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex justify-start"
+      className="flex justify-start py-1 pr-9"
     >
-      <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-bl-md bg-white/85 px-4 py-2.5 text-[15px] leading-relaxed text-zinc-700 shadow-sm backdrop-blur-sm">
+      <div
+        className="max-w-full whitespace-pre-wrap rounded-2xl rounded-bl-md px-4 py-2.5 text-[14.5px]"
+        style={{
+          background: "var(--bubble-them)",
+          color: "var(--text-deep)",
+          lineHeight: 1.75,
+          letterSpacing: ".3px",
+        }}
+      >
         {content}
       </div>
     </motion.div>
   );
 }
 
-function ModeTab({
+function PillTab({
   active,
   onClick,
   children,
@@ -248,9 +341,17 @@ function ModeTab({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-1.5 transition ${
-        active ? "bg-white text-violet-700 shadow-sm" : "text-zinc-400"
-      }`}
+      className="px-4 py-1.5 text-[13px] transition-all"
+      style={{
+        borderRadius: 20,
+        fontWeight: active ? 500 : 400,
+        color: active ? "var(--text-deep)" : "var(--text-mid)",
+        background: active ? "rgba(255,255,255,.75)" : "rgba(255,255,255,.4)",
+        border: active ? "1px solid rgba(196,166,184,.35)" : "1px solid transparent",
+        letterSpacing: ".5px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}
     >
       {children}
     </button>
@@ -259,7 +360,7 @@ function ModeTab({
 
 function Gear() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -269,8 +370,8 @@ function Gear() {
 function Dot({ delay = 0 }: { delay?: number }) {
   return (
     <span
-      className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-400"
-      style={{ animationDelay: `${delay}s` }}
+      className="h-1.5 w-1.5 animate-pulse rounded-full"
+      style={{ animationDelay: `${delay}s`, background: "var(--text-faint)" }}
     />
   );
 }

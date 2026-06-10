@@ -96,7 +96,13 @@ export function FloorPlan() {
       <Link
         href="/settings"
         aria-label="设置"
-        className="fixed right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/45 text-zinc-500 shadow-sm backdrop-blur-md transition hover:rotate-45 hover:text-zinc-700"
+        className="fixed right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md transition hover:rotate-45"
+        style={{
+          background: "var(--card-bg)",
+          border: "1px solid var(--card-border)",
+          boxShadow: "var(--card-shadow)",
+          color: "var(--accent-dusk)",
+        }}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />

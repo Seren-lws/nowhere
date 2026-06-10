@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
+/* ─── nowhere 设计基因（参考旧家 cyber-home，雾紫梦境 + 水彩奶白） ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-dream: #eee9f0;
+  --bg-gradient: linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%);
+
+  --mist-lavender: #cdc1d9;
+  --blush: #e8c4c4;
+  --blush-glow: rgba(232, 196, 196, 0.25);
+  --accent-iris: #7b74a0;
+  --accent-wisteria: #8a7da5;
+  --accent-dusk: #6b6490;
+
+  --text-deep: #2e2a3d;
+  --text-mid: #5a5470;
+  --text-faint: #8a849e;
+
+  --bubble-them: rgba(205, 193, 217, 0.3);
+  --bubble-me: linear-gradient(135deg, #d4b5bf 0%, #bba7c7 50%, #a9b3cb 100%);
+  --thought-bg: rgba(155, 149, 181, 0.07);
+  --thought-border: rgba(155, 149, 181, 0.22);
+
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-border: rgba(255, 255, 255, 0.55);
+  --card-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  --input-bg: rgba(248, 245, 250, 0.6);
+  --input-border: rgba(155, 149, 181, 0.15);
+  --input-focus: rgba(232, 196, 196, 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: var(--bg-dream);
+  --color-foreground: var(--text-deep);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-dream);
+  color: var(--text-deep);
+  font-family: var(--font-serif), "Noto Serif SC", "Songti SC", serif;
+  letter-spacing: 0.4px;
+  -webkit-font-smoothing: antialiased;
 }
