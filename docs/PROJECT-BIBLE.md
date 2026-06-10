@@ -8,7 +8,10 @@
 ## 当前阶段
 
 **阶段 0 · 地基（奠基）** — 已完成 ✅
-工程骨架初始化完毕，按房间分空路由。**未实现任何功能页面。** P0 需求等待下发。
+工程骨架初始化完毕，按房间分空路由。P0 需求陆续下发。
+
+**阶段 P0-01 · 入口页（Entrance）** — 已完成 ✅（色块版，待声声提供素材后替换贴图）
+推门 → 暖光淹没 → 落到平面图的完整体验已做通；diegetic UI、视差、时间氛围、状态框架到位。详见下方「入口页（P0-01）实现记录」。
 
 记录于 2026-06-10（声声退职日，也是 nowhere 动工之日）。
 
@@ -77,16 +80,86 @@ nowhere/
 
 ---
 
-## 待办（等声声下发 P0）
+## 入口页（P0-01）实现记录
 
-P0 = 入口 + 平面图热点 + 客厅（客厅先接简易大脑：基础人格 prompt + 简单记忆）。
+新增依赖：`motion@12`（Framer Motion 新包名）。
 
-- [ ] 推门进入动画（Framer Motion）
-- [ ] 拟物风格家庭平面图（SVG 热区，竖屏构图）
-- [ ] 客厅日常聊天 + 简易大脑
+**文件结构**
+```
+app/entrance/page.tsx          首屏，仅渲染 <Scene/>
+app/floor-plan/page.tsx        推门落点（占位）；承接"光退潮"入场
+app/mailbox/page.tsx           点信箱 → 占位
+app/settings/page.tsx          长按门牌 No.0 → 占位
+lib/entrance/layout.ts         统一坐标系 + 动画时序常量（图层共用）
+lib/entrance/state.ts          EntranceState 接口 + mock 数据
+components/entrance/
+  Scene.tsx                    编排：图层装配 / 视差 / 时间氛围 / 推门 / 跳转
+  MainScene.tsx                L1 全景 + 窗 + 门廊灯 + 信箱
+  DoorCavity.tsx               L2 黑底 + L3 门洞暖光（呼吸 / 扩散）
+  Door.tsx                     L4 门扇 + 门牌 No.0 + 门缝光
+  Foreground.tsx               L5 前景（multiply 占位）
+  hooks/useParallax.ts         陀螺仪→指针降级视差
+  hooks/useTimeOfDay.ts        四档时间色温
+  hooks/useHaptics.ts          轻触觉
+```
+所有文件均 < 500 行。
+
+**图层装配（从后到前，统一坐标系 `lib/entrance/layout.ts` 的 `DOOR` 等 Box 常量，单位为 9:16 舞台百分比）**
+| 层 | 组件 | 色块版表现 | 换真图 |
+|---|---|---|---|
+| L1 主场景 | MainScene | 夜墙渐变 + 窗/门廊灯/信箱 | 整张全景图作背景 |
+| L2 门洞黑底 | DoorCavity | 与门同位纯黑矩形（内收 1.5px） | 代码生成，不换 |
+| L3 门洞光 | DoorCavity | 暖黄径向渐变 + 模糊 + 呼吸 | 代码生成，不换 |
+| L4 门扇 | Door | 灰紫圆角矩形 + 门把 + No.0 | 抠图门扇 PNG |
+| L5 前景 | Foreground | 底部草影（multiply） | 纯白底花草图 |
+
+主场景组（L1+L2+L3+L4）整体做 ±4px 视差并叠时间滤镜；前景 ±10px 且穿透点击。
+
+**推门动画参数表（`TIMELINE`，单位 ms；曲线可调，节奏不可变）**
+| 阶段 | start | duration | 说明 |
+|---|---|---|---|
+| 门扇转开 | 0 | 1300 | 绕左轴 rotateY −78°，缓动 cubic-bezier(.6,.05,.3,1)，父级 perspective 1400px |
+| 门洞光扩散 | 350 | 900 | scale 1→1.7 + opacity，easeOut |
+| 暖光淹没（淡入） | 700 | 900 | 全屏暖光罩 easeIn；盖满（onAnimationComplete）即跳转 |
+| 光退潮（淡出） | 1900 | 700 | 在 floor-plan 页淡出暖光罩，露出平面图 |
+
+- 一次点击走完，动画期间锁重复点击（按钮 disabled）。
+- 触觉：开门瞬间 `navigator.vibrate(12)`（iOS 不支持，静默降级）。
+- `prefers-reduced-motion`：跳过门旋转，暖光快速淡入（0.35s）后跳转。
+- 转场无白屏：入口暖光罩盖满后 `router.push("/floor-plan")`（已 prefetch），落点页读 `sessionStorage["nowhere:entering"]` 接着播退潮。
+
+**状态接口（供大脑层后续对接，`lib/entrance/state.ts`）**
+```ts
+interface EntranceState {
+  isHome: boolean;          // 窗内暖光
+  hasUnreadMessage: boolean;// 门缝透光 + 信箱露信角
+  unreadCount: number;
+}
+```
+本期用 `MOCK_ENTRANCE_STATE`（默认在家、有 1 条未读）。大脑层只需提供同形状数据，画面表现不动。
+
+**交互映射**：点门扇→推门；点信箱→`/mailbox`；长按 No.0（550ms）→`/settings`。
+**时间氛围**：按本地小时分 dawn/day/dusk/night 四档，黄昏镀金、夜晚压暗 + 门廊灯亮，跨档 1.5s CSS 过渡。
+
+**踩坑记录**
+- `requestAnimationFrame` 在非前台标签页会被冻结，曾用它标记"预加载就绪"导致门点不动；色块版无图可载，改为默认就绪。
+- L5 前景层 `absolute inset-0` 包裹层会拦截点击，须显式 `pointer-events-none` 让门/信箱可点。
+
+**待声声提供的素材**：素材A 全景图（关门态）、素材B 门扇抠图 PNG、素材C 纯白底前景花草。到位后按 `lib/entrance/layout.ts` 的 `DOOR` 像素位置回填即可对位。
+
+---
+
+## 待办
+
+**P0 剩余**（= 入口 ✅ + 平面图热点 + 客厅）
+- [ ] 入口素材替换（等声声三张图）
+- [ ] 拟物风格家庭平面图（SVG 热区，竖屏构图）—— 接住入口落点 `/floor-plan`
+- [ ] 客厅日常聊天 + 简易大脑（基础人格 prompt + 简单记忆）
 - [ ] 接入 yunwu.ai 中转、模型名做成配置项
 - [ ] Supabase 建库（建库即启用 pgvector）
 
 ---
 
-*更新记录：2026-06-10 · 阶段0地基完成。*
+*更新记录：*
+- *2026-06-10 · 阶段0地基完成。*
+- *2026-06-10 · P0-01 入口页（色块版）完成。*
