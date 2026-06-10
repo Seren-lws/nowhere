@@ -19,6 +19,7 @@ import { MainScene } from "./MainScene";
 import { DoorCavity } from "./DoorCavity";
 import { Door } from "./Door";
 import { Foreground } from "./Foreground";
+import { GlowLayer } from "./GlowLayer";
 import { useParallax } from "./hooks/useParallax";
 import { useTimeOfDay } from "./hooks/useTimeOfDay";
 import { useHaptics } from "./hooks/useHaptics";
@@ -104,11 +105,7 @@ export function Scene() {
             transition: "filter 1.5s ease",
           }}
         >
-          <MainScene
-            isHome={state.isHome}
-            porchLit={mood.porchLit}
-            onOpenSettings={() => router.push("/settings")}
-          />
+          <MainScene onOpenSettings={() => router.push("/settings")} />
           <DoorCavity opening={opening} warm={WARM_BY_TOD[mood.tod]} />
           {!reduced && (
             <Door
@@ -118,12 +115,6 @@ export function Scene() {
               onOpenMailbox={() => router.push("/mailbox")}
             />
           )}
-
-          {/* 时间色温叠色罩 */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: mood.tint, transition: "background 1.5s ease" }}
-          />
         </motion.div>
 
         {/* 前景组（L5）：±10px 视差。整层穿透点击，不挡门 / 信箱 */}
@@ -131,7 +122,18 @@ export function Scene() {
           className="pointer-events-none absolute inset-0"
           style={{ x: fgX, y: fgY }}
         >
-          <Foreground dim={mood.tod === "night"} />
+          <Foreground />
+        </motion.div>
+
+        {/* 时间色温叠色罩：盖在背景+前景之上，整场统一染色（夜=蓝紫） */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: mood.tint, transition: "background 1.5s ease" }}
+        />
+
+        {/* 灯光层：在夜罩之上，让铜灯/窗光穿透夜色亮起。随主场景做 ±4px 视差 */}
+        <motion.div className="absolute inset-0" style={{ x: sceneX, y: sceneY }}>
+          <GlowLayer isHome={state.isHome} porchLit={mood.porchLit} />
         </motion.div>
 
         {/* reduced-motion 降级：没有门可点时，整台舞台可点直接进入 */}
