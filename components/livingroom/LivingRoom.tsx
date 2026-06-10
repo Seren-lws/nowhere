@@ -29,6 +29,8 @@ export function LivingRoom() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<ChatMode>("sentences");
+  /** 被点选的我方消息（弹出编辑/重试操作条） */
+  const [selectedTs, setSelectedTs] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,24 +51,19 @@ export function LivingRoom() {
 
   const ready = settings ? isChatReady(settings) : false;
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text || sending || !settings) return;
-    setError(null);
-
-    const acc = [...messages, { role: "user", content: text, ts: Date.now() } as ChatMessage];
-    setMessages(acc);
-    saveHistory(acc);
-    setInput("");
+  /** 向模型要回复：base 以一条我方消息收尾，回复逐条落进 base 的副本 */
+  const requestReply = async (base: ChatMessage[]) => {
+    if (!settings) return;
+    const last = base[base.length - 1];
+    const ctx = toContext(base.slice(0, -1)).slice(-HISTORY_WINDOW);
     setSending(true);
-
-    const ctx = toContext(messages).slice(-HISTORY_WINDOW);
-
+    setError(null);
     try {
-      const raw = await sendChat(buildMessages(ctx, text, mode), settings);
+      const raw = await sendChat(buildMessages(ctx, last.content, mode), settings);
       const { inner, parts } = parseReply(raw, mode);
       setSending(false);
 
+      const acc = [...base];
       let t = Date.now();
       if (inner) {
         await delay(220);
@@ -84,6 +81,50 @@ export function LivingRoom() {
       setSending(false);
       setError(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || sending || !settings) return;
+    setSelectedTs(null);
+    const acc = [...messages, { role: "user", content: text, ts: Date.now() } as ChatMessage];
+    setMessages(acc);
+    saveHistory(acc);
+    setInput("");
+    await requestReply(acc);
+  };
+
+  /** 编辑重发：删掉这条及之后的一切，原文填回输入框 */
+  const editResend = (ts: number) => {
+    const idx = messages.findIndex((m) => m.ts === ts);
+    if (idx < 0) return;
+    const target = messages[idx];
+    const truncated = messages.slice(0, idx);
+    setMessages(truncated);
+    saveHistory(truncated);
+    setInput(target.content);
+    setSelectedTs(null);
+  };
+
+  /** 重新回复：保留这条，删掉之后他的所有话，重新请一遍（换模型测试用） */
+  const retryFrom = async (ts: number) => {
+    const idx = messages.findIndex((m) => m.ts === ts);
+    if (idx < 0) return;
+    const truncated = messages.slice(0, idx + 1);
+    setMessages(truncated);
+    saveHistory(truncated);
+    setSelectedTs(null);
+    await requestReply(truncated);
+  };
+
+  /** 清空当前聊天（回到初见的招呼） */
+  const clearChat = () => {
+    if (!window.confirm("把这间客厅的聊天清空吗？清空后他会回到初见时的样子（设置和其他数据不受影响）。")) return;
+    const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
+    setMessages([greet]);
+    saveHistory([greet]);
+    setSelectedTs(null);
+    setError(null);
   };
 
   return (
@@ -128,20 +169,43 @@ export function LivingRoom() {
             {settings?.chatModel || "在线"}
           </span>
         </div>
-        <Link
-          href="/settings"
-          aria-label="设置"
-          className="transition-all hover:rotate-45"
-          style={{ color: "var(--accent-dusk)" }}
-        >
-          <Gear />
-        </Link>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            aria-label="清空聊天"
+            onClick={clearChat}
+            className="transition-opacity hover:opacity-70"
+            style={{ color: "var(--accent-dusk)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Broom />
+          </button>
+          <Link
+            href="/settings"
+            aria-label="设置"
+            className="transition-all hover:rotate-45"
+            style={{ color: "var(--accent-dusk)" }}
+          >
+            <Gear />
+          </Link>
+        </div>
       </header>
 
       {/* 消息区 */}
       <div className="flex-1 space-y-1 overflow-y-auto px-5 py-6">
         {messages.map((m) => (
-          <Bubble key={m.ts} role={m.role} content={m.content} />
+          <Bubble
+            key={m.ts}
+            role={m.role}
+            content={m.content}
+            selected={selectedTs === m.ts}
+            onSelect={
+              m.role === "user" && !sending
+                ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts)
+                : undefined
+            }
+            onEditResend={() => editResend(m.ts)}
+            onRetry={() => retryFrom(m.ts)}
+          />
         ))}
 
         {sending && (
@@ -257,26 +321,55 @@ export function LivingRoom() {
   );
 }
 
-function Bubble({ role, content }: { role: ChatMessage["role"]; content: string }) {
+function Bubble({
+  role,
+  content,
+  selected,
+  onSelect,
+  onEditResend,
+  onRetry,
+}: {
+  role: ChatMessage["role"];
+  content: string;
+  selected?: boolean;
+  onSelect?: () => void;
+  onEditResend?: () => void;
+  onRetry?: () => void;
+}) {
   if (role === "user") {
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="flex justify-end py-1 pl-9"
+        className="flex flex-col items-end py-1 pl-9"
       >
         <div
+          onClick={onSelect}
           className="max-w-full whitespace-pre-wrap rounded-2xl rounded-br-md px-4 py-2.5 text-[14.5px]"
           style={{
             background: "var(--bubble-me)",
             color: "rgba(255,255,255,.96)",
             lineHeight: 1.75,
             letterSpacing: ".3px",
+            cursor: onSelect ? "pointer" : "default",
+            outline: selected ? "2px solid rgba(187,167,199,.55)" : "none",
+            outlineOffset: 2,
           }}
         >
           {content}
         </div>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mt-1.5 flex gap-1.5"
+          >
+            <ActionPill onClick={onEditResend}>✎ 编辑重发</ActionPill>
+            <ActionPill onClick={onRetry}>↻ 重新回复</ActionPill>
+          </motion.div>
+        )}
       </motion.div>
     );
   }
@@ -331,6 +424,34 @@ function Bubble({ role, content }: { role: ChatMessage["role"]; content: string 
   );
 }
 
+function ActionPill({
+  onClick,
+  children,
+}: {
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-3 py-1 text-[12px] transition-all"
+      style={{
+        borderRadius: 14,
+        background: "rgba(255,255,255,.75)",
+        border: "1px solid rgba(196,166,184,.35)",
+        color: "var(--text-mid)",
+        letterSpacing: ".5px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        boxShadow: "0 2px 8px rgba(0,0,0,.05)",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function PillTab({
   active,
   onClick,
@@ -366,6 +487,16 @@ function Gear() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+function Broom() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   );
 }
