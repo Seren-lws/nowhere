@@ -24,23 +24,24 @@ export interface TimeMood {
 
 const MOODS: Record<TimeOfDay, Omit<TimeMood, "tod">> = {
   dawn: {
-    filter: "brightness(1.02) saturate(1.02)",
-    tint: "rgba(180, 200, 230, 0.10)",
+    filter: "brightness(1.02) saturate(1.0)",
+    tint: "rgba(186, 200, 232, 0.12)",
     porchLit: false,
   },
   day: {
-    filter: "brightness(1.05) saturate(1.04)",
+    filter: "brightness(1.03) saturate(1.02)",
     tint: "rgba(255, 255, 255, 0.0)",
     porchLit: false,
   },
   dusk: {
-    filter: "brightness(0.98) saturate(1.12) sepia(0.12)",
-    tint: "rgba(255, 170, 90, 0.16)",
+    filter: "brightness(0.99) saturate(1.08)",
+    tint: "rgba(255, 178, 104, 0.16)",
     porchLit: true,
   },
+  // 夜晚：蓝紫透明罩 + 点灯，不压暗（声声指定）
   night: {
-    filter: "brightness(0.62) saturate(0.9)",
-    tint: "rgba(20, 30, 70, 0.42)",
+    filter: "brightness(0.9) saturate(1.0)",
+    tint: "rgba(96, 88, 168, 0.34)",
     porchLit: true,
   },
 };

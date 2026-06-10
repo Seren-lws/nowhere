@@ -84,7 +84,7 @@ export function Scene() {
   };
 
   return (
-    <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
+    <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#efeae3]">
       {/* 舞台：竖屏 9:16，铺满可视高度并居中 */}
       <div
         className="relative overflow-hidden"
@@ -106,9 +106,8 @@ export function Scene() {
         >
           <MainScene
             isHome={state.isHome}
-            hasUnread={state.hasUnreadMessage}
             porchLit={mood.porchLit}
-            onOpenMailbox={() => router.push("/mailbox")}
+            onOpenSettings={() => router.push("/settings")}
           />
           <DoorCavity opening={opening} warm={WARM_BY_TOD[mood.tod]} />
           {!reduced && (
@@ -116,7 +115,7 @@ export function Scene() {
               opening={opening}
               hasUnread={state.hasUnreadMessage}
               onPushDoor={pushDoor}
-              onLongPressPlate={() => router.push("/settings")}
+              onOpenMailbox={() => router.push("/mailbox")}
             />
           )}
 
@@ -132,7 +131,7 @@ export function Scene() {
           className="pointer-events-none absolute inset-0"
           style={{ x: fgX, y: fgY }}
         >
-          <Foreground />
+          <Foreground dim={mood.tod === "night"} />
         </motion.div>
 
         {/* reduced-motion 降级：没有门可点时，整台舞台可点直接进入 */}
