@@ -18,7 +18,6 @@ import { MOCK_ENTRANCE_STATE } from "@/lib/entrance/state";
 import { MainScene } from "./MainScene";
 import { DoorCavity } from "./DoorCavity";
 import { Door } from "./Door";
-import { Foreground } from "./Foreground";
 import { GlowLayer } from "./GlowLayer";
 import { useParallax } from "./hooks/useParallax";
 import { useTimeOfDay } from "./hooks/useTimeOfDay";
@@ -49,11 +48,9 @@ export function Scene() {
     router.prefetch(FLOOR_PLAN_ROUTE); // 预取落点，避免转场白屏
   }, [router]);
 
-  // 主场景组 ±4px；前景 ±10px（"呼吸"而非"晃动"）
+  // 主场景组 ±4px 视差（"呼吸"而非"晃动"）
   const sceneX = useTransform(tilt.x, [-1, 1], [-4, 4]);
   const sceneY = useTransform(tilt.y, [-1, 1], [-4, 4]);
-  const fgX = useTransform(tilt.x, [-1, 1], [-10, 10]);
-  const fgY = useTransform(tilt.y, [-1, 1], [-10, 10]);
 
   const pushDoor = () => {
     if (opening || !ready) return;
@@ -117,15 +114,9 @@ export function Scene() {
           )}
         </motion.div>
 
-        {/* 前景组（L5）：±10px 视差。整层穿透点击，不挡门 / 信箱 */}
-        <motion.div
-          className="pointer-events-none absolute inset-0"
-          style={{ x: fgX, y: fgY }}
-        >
-          <Foreground />
-        </motion.div>
+        {/* 前景花草层（L5）本期按声声反馈撤掉——花草会遮门。素材与组件保留，后续如需再启。 */}
 
-        {/* 时间色温叠色罩：盖在背景+前景之上，整场统一染色（夜=蓝紫） */}
+        {/* 时间色温叠色罩：盖在所有图层之上，整场统一染色（夜=蓝紫） */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: mood.tint, transition: "background 1.5s ease" }}
