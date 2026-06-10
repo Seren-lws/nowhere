@@ -106,41 +106,42 @@ export function FloorPlan() {
             className="pointer-events-none absolute inset-0 h-full w-full select-none"
           />
 
-          {/* 氛围光层（轻视差）：壁炉火 + 他的光点 */}
+          {/* 氛围光层（轻视差）：壁炉火 + 他的光点。
+              用宽度定方形（aspectRatio:1）保证是圆而非竖条；正常混合，暖光在亮底上可见。 */}
           <motion.div
             aria-hidden
             className="pointer-events-none absolute inset-0"
-            style={{ y: glowDrift, mixBlendMode: "screen" }}
+            style={{ y: glowDrift }}
           >
             {state.fireplaceLit && (
               <motion.div
-                className="absolute"
+                className="absolute rounded-full"
                 style={{
                   left: `${FIREPLACE.left}%`,
                   top: `${FIREPLACE.top}%`,
                   width: `${FIREPLACE.size}%`,
-                  height: `${FIREPLACE.size}%`,
+                  aspectRatio: "1",
                   transform: "translate(-50%, -50%)",
                   background:
-                    "radial-gradient(circle at 50% 55%, rgba(255,206,150,0.95) 0%, rgba(255,184,120,0.4) 40%, rgba(255,184,120,0) 72%)",
+                    "radial-gradient(circle at 50% 58%, rgba(246,166,98,0.85) 0%, rgba(240,150,86,0.4) 42%, rgba(240,150,86,0) 72%)",
                 }}
-                animate={{ opacity: [0.65, 1, 0.7, 0.95, 0.65] }}
+                animate={{ opacity: [0.7, 1, 0.78, 0.96, 0.7], scale: [0.96, 1.06, 0.98, 1.04, 0.96] }}
                 transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
               />
             )}
             {state.hePresentRoom && HE_POINT_BY_ROOM[state.hePresentRoom] && (
               <motion.div
-                className="absolute"
+                className="absolute rounded-full"
                 style={{
                   left: `${HE_POINT_BY_ROOM[state.hePresentRoom].left}%`,
                   top: `${HE_POINT_BY_ROOM[state.hePresentRoom].top}%`,
-                  width: "5%",
-                  height: "5%",
+                  width: "5.5%",
+                  aspectRatio: "1",
                   transform: "translate(-50%, -50%)",
                   background:
-                    "radial-gradient(circle, rgba(255,236,206,1) 0%, rgba(248,222,196,0.5) 45%, rgba(248,222,196,0) 72%)",
+                    "radial-gradient(circle, rgba(250,214,160,0.9) 0%, rgba(246,222,188,0.45) 46%, rgba(246,222,188,0) 72%)",
                 }}
-                animate={{ opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
+                animate={{ opacity: [0.6, 1, 0.6], scale: [0.9, 1.12, 0.9] }}
                 transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
               />
             )}
