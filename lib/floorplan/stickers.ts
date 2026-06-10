@@ -58,9 +58,12 @@ export const MOCK_HOME_STATE: HomeState = {
 };
 
 /** 壁炉火光位置（客厅，% of 全幅） */
-export const FIREPLACE = { left: 84, top: 70.5, size: 9 };
+export const FIREPLACE = { left: 87, top: 72.5, size: 9 };
 
-/** "他在某间"时光点落点（% of 全幅）。先给已落地的客厅。 */
+/**
+ * "他在某间"时光点落点（% of 全幅）。先给已落地的客厅（坐沙发上）。
+ * 后期他的形象定下来后，这个光点可换成 QQ 小人坐在此处。
+ */
 export const HE_POINT_BY_ROOM: Record<string, { left: number; top: number }> = {
-  "living-room": { left: 41, top: 71 },
+  "living-room": { left: 41, top: 74 },
 };

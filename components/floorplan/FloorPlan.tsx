@@ -138,8 +138,9 @@ export function FloorPlan() {
                   width: "5.5%",
                   aspectRatio: "1",
                   transform: "translate(-50%, -50%)",
+                  // 他的光点（蓝色）。后期他的形象定下来可换成 QQ 小人坐在此处。
                   background:
-                    "radial-gradient(circle, rgba(250,214,160,0.9) 0%, rgba(246,222,188,0.45) 46%, rgba(246,222,188,0) 72%)",
+                    "radial-gradient(circle, rgba(150,178,224,0.9) 0%, rgba(176,196,232,0.45) 46%, rgba(176,196,232,0) 72%)",
                 }}
                 animate={{ opacity: [0.6, 1, 0.6], scale: [0.9, 1.12, 0.9] }}
                 transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
