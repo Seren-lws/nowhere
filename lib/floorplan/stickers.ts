@@ -58,7 +58,7 @@ export const MOCK_HOME_STATE: HomeState = {
 };
 
 /** 壁炉火光位置（客厅，% of 全幅） */
-export const FIREPLACE = { left: 87, top: 72.5, size: 9 };
+export const FIREPLACE = { left: 87, top: 74.5, size: 9 };
 
 /**
  * "他在某间"时光点落点（% of 全幅）。先给已落地的客厅（坐沙发上）。
