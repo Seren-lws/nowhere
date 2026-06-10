@@ -122,8 +122,11 @@ export function Scene() {
           style={{ background: mood.tint, transition: "background 1.5s ease" }}
         />
 
-        {/* 灯光层：在夜罩之上，让铜灯/窗光穿透夜色亮起。随主场景做 ±4px 视差 */}
-        <motion.div className="absolute inset-0" style={{ x: sceneX, y: sceneY }}>
+        {/* 灯光层：在夜罩之上，让铜灯穿透夜色亮起。随主场景做 ±4px 视差。整层穿透点击，不挡门 */}
+        <motion.div
+          className="pointer-events-none absolute inset-0"
+          style={{ x: sceneX, y: sceneY }}
+        >
           <GlowLayer porchLit={mood.porchLit} />
         </motion.div>
 
