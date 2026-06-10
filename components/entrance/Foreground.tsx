@@ -13,7 +13,7 @@ export function Foreground() {
       alt=""
       draggable={false}
       aria-hidden
-      className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+      className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-bottom"
       style={{ mixBlendMode: "multiply" }}
     />
   );

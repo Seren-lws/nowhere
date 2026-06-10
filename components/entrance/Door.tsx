@@ -96,12 +96,8 @@ export function Door({
             if (!opening) onOpenMailbox();
           }}
           disabled={opening}
-        >
-          {hasUnread && (
-            // 露出的信角
-            <span className="absolute -top-1.5 right-1 h-2.5 w-3 rotate-6 rounded-[1px] bg-amber-50 shadow-sm" />
-          )}
-        </button>
+        />
+        {/* 信角指示器本期撤掉（声声反馈位置不对）；信箱点击仍可进留言 */}
       </motion.div>
     </div>
   );

@@ -133,7 +133,7 @@ export function Scene() {
 
         {/* 灯光层：在夜罩之上，让铜灯/窗光穿透夜色亮起。随主场景做 ±4px 视差 */}
         <motion.div className="absolute inset-0" style={{ x: sceneX, y: sceneY }}>
-          <GlowLayer isHome={state.isHome} porchLit={mood.porchLit} />
+          <GlowLayer porchLit={mood.porchLit} />
         </motion.div>
 
         {/* reduced-motion 降级：没有门可点时，整台舞台可点直接进入 */}
