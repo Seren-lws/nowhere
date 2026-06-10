@@ -235,18 +235,21 @@ export function LivingRoom() {
             type="button"
             onClick={send}
             disabled={!ready || sending || !input.trim()}
-            className="px-6 py-2.5 text-[14px] transition-all disabled:opacity-40"
+            aria-label="发送"
+            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center transition-all disabled:opacity-40"
             style={{
-              borderRadius: 14,
+              borderRadius: "50%",
               border: "none",
               background: "linear-gradient(135deg, var(--blush) 0%, var(--accent-wisteria) 100%)",
               color: "rgba(255,255,255,.95)",
-              letterSpacing: "2px",
               boxShadow: "0 2px 10px rgba(196,160,170,.2)",
               cursor: "pointer",
             }}
           >
-            说
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "translateX(-1px)" }}>
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+            </svg>
           </button>
         </div>
       </div>
