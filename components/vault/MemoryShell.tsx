@@ -1,55 +1,64 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { MemoryTabs } from "./MemoryTabs";
 
+const BUBBLE_COUNT = 12;
+
+function useBubbles() {
+  return useMemo(() => {
+    const seeds = [
+      { size: 35, left: 8, dur: 14, delay: 0 },
+      { size: 22, left: 25, dur: 11, delay: 3 },
+      { size: 50, left: 42, dur: 16, delay: 7 },
+      { size: 28, left: 60, dur: 12, delay: 1 },
+      { size: 40, left: 78, dur: 18, delay: 5 },
+      { size: 18, left: 15, dur: 13, delay: 9 },
+      { size: 55, left: 90, dur: 15, delay: 2 },
+      { size: 30, left: 50, dur: 10, delay: 6 },
+      { size: 24, left: 35, dur: 17, delay: 4 },
+      { size: 45, left: 70, dur: 14, delay: 8 },
+      { size: 20, left: 5, dur: 12, delay: 10 },
+      { size: 38, left: 55, dur: 16, delay: 3 },
+    ];
+    return seeds.slice(0, BUBBLE_COUNT);
+  }, []);
+}
+
 export function MemoryShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const bubbles = useBubbles();
 
   return (
     <div className="fixed inset-0 text-[var(--text-deep)]">
-      {/* Background gradient */}
+      {/* Breathing gradient background */}
       <div
         className="fixed inset-0 -z-10"
         style={{
           background:
-            "linear-gradient(135deg, #fdf8f8 0%, #f1dede 50%, #e3cffd 100%)",
+            "linear-gradient(-45deg, #fdf8f8, #e3cffd, #d4a5a5, #f7f2f2)",
+          backgroundSize: "400% 400%",
+          animation: "gradient-x 15s ease infinite",
         }}
       />
 
-      {/* Floating bubbles */}
-      <div
-        className="fixed w-[200px] h-[200px] rounded-full -z-10 pointer-events-none"
-        style={{
-          top: "15%",
-          left: "10%",
-          background:
-            "radial-gradient(circle, rgba(255,183,197,0.2) 0%, transparent 70%)",
-          animation: "float-bubble 12s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="fixed w-[150px] h-[150px] rounded-full -z-10 pointer-events-none"
-        style={{
-          top: "60%",
-          right: "5%",
-          background:
-            "radial-gradient(circle, rgba(227,207,253,0.25) 0%, transparent 70%)",
-          animation: "float-bubble 10s ease-in-out infinite",
-          animationDelay: "3s",
-        }}
-      />
-      <div
-        className="fixed w-[120px] h-[120px] rounded-full -z-10 pointer-events-none"
-        style={{
-          bottom: "25%",
-          left: "60%",
-          background:
-            "radial-gradient(circle, rgba(241,222,222,0.3) 0%, transparent 70%)",
-          animation: "float-bubble 14s ease-in-out infinite",
-          animationDelay: "6s",
-        }}
-      />
+      {/* Rising bubbles */}
+      <div className="fixed inset-0 -z-[5] overflow-hidden pointer-events-none">
+        {bubbles.map((b, i) => (
+          <div
+            key={i}
+            className="bubble"
+            style={{
+              width: b.size,
+              height: b.size,
+              left: `${b.left}%`,
+              animation: `bubble-rise ${b.dur}s linear infinite`,
+              animationDelay: `${b.delay}s`,
+            }}
+          />
+        ))}
+      </div>
 
       {/* Header */}
       <nav
