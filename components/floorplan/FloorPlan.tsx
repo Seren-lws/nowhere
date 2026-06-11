@@ -16,7 +16,7 @@ interface RoomDef {
 
 const ROOMS: RoomDef[] = [
   { key: "study", label: "书房", image: "/rooms/study.jpg", bg: "#fcf8f7", icon: "import_contacts" },
-  { key: "playroom", label: "娱乐室", image: "/rooms/playroom.jpg", bg: "#e9e4f0", icon: "sports_esports" },
+  { key: "playroom", label: "娱乐室", image: "/rooms/playroom.png", bg: "#e9e4f0", icon: "sports_esports" },
   { key: "bedroom", label: "卧室", image: "/rooms/bedroom.jpg", bg: "#f5eff5", icon: "bed" },
   { key: "living-room", label: "客厅", image: "/rooms/living-room.jpg", bg: "#fcf7f2", icon: "chair" },
   { key: "vault", label: "保险柜", image: "/rooms/vault.jpg", bg: "#ece7e7", icon: "favorite_border", iconActive: "favorite" },
