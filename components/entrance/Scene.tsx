@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  motion,
-  useReducedMotion,
-  useTransform,
-  type Variants,
-} from "motion/react";
+import { motion, useReducedMotion, useTransform } from "motion/react";
+import gsap from "gsap";
 import {
   DOOR_CENTER_ORIGIN,
   ENTERING_FLAG,
   FLOOR_PLAN_ROUTE,
   STAGE_ASPECT,
-  TIMELINE,
-  ZOOM_EASE,
   ZOOM_SCALE,
 } from "@/lib/entrance/layout";
 import { MOCK_ENTRANCE_STATE } from "@/lib/entrance/state";
@@ -26,7 +20,6 @@ import { useParallax } from "./hooks/useParallax";
 import { useTimeOfDay } from "./hooks/useTimeOfDay";
 import { useHaptics } from "./hooks/useHaptics";
 
-/** 各时间档的门洞暖光中心色（奶油暖调、低饱和） */
 const WARM_BY_TOD = {
   dawn: "rgba(248,234,214,1)",
   day: "rgba(250,236,216,1)",
@@ -42,24 +35,24 @@ export function Scene() {
   const tilt = useParallax();
 
   const [opening, setOpening] = useState(false);
-  // 预加载门槛：色块版无图可载，默认即就绪。素材版可改为图层贴图加载完成后再置 true。
   const [ready] = useState(true);
 
   const state = MOCK_ENTRANCE_STATE;
 
+  const zoomRef = useRef<HTMLDivElement>(null);
+  const softGlowRef = useRef<HTMLDivElement>(null);
+  const whiteVeilRef = useRef<HTMLDivElement>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
   useEffect(() => {
-    router.prefetch(FLOOR_PLAN_ROUTE); // 预取落点，避免转场白屏
+    router.prefetch(FLOOR_PLAN_ROUTE);
+    return () => {
+      tlRef.current?.kill();
+    };
   }, [router]);
 
-  // 主场景组 ±4px 视差（"呼吸"而非"晃动"）
   const sceneX = useTransform(tilt.x, [-1, 1], [-4, 4]);
   const sceneY = useTransform(tilt.y, [-1, 1], [-4, 4]);
-
-  const pushDoor = () => {
-    if (opening || !ready) return;
-    setOpening(true);
-    lightImpact();
-  };
 
   const goFloorPlan = () => {
     try {
@@ -70,38 +63,41 @@ export function Scene() {
     router.push(FLOOR_PLAN_ROUTE);
   };
 
-  /** 镜头推近：整个舞台朝门扇中心放大（reduced 时不动） */
-  const zoomVariants: Variants = {
-    idle: { scale: 1 },
-    open: {
-      scale: reduced ? 1 : ZOOM_SCALE,
-      transition: {
-        delay: TIMELINE.zoom.start / 1000,
-        duration: TIMELINE.zoom.duration / 1000,
-        ease: ZOOM_EASE,
-      },
-    },
-  };
+  const pushDoor = () => {
+    if (opening || !ready) return;
+    setOpening(true);
+    lightImpact();
 
-  /** 白光：从门洞中心炸开成一整片白（clip-path 圆形扩张），盖满后跳转 */
-  const flashVariants: Variants = {
-    hidden: { clipPath: `circle(0% at ${DOOR_CENTER_ORIGIN})`, opacity: 1 },
-    open: reduced
-      ? { clipPath: `circle(150% at ${DOOR_CENTER_ORIGIN})`, opacity: 1, transition: { duration: 0.35 } }
-      : {
-          clipPath: `circle(150% at ${DOOR_CENTER_ORIGIN})`,
-          opacity: 1,
-          transition: {
-            delay: TIMELINE.flash.start / 1000,
-            duration: TIMELINE.flash.duration / 1000,
-            ease: "easeIn",
-          },
-        },
+    if (reduced) {
+      goFloorPlan();
+      return;
+    }
+
+    const tl = gsap.timeline({ onComplete: goFloorPlan });
+    tlRef.current = tl;
+
+    tl.to(zoomRef.current, {
+      scale: ZOOM_SCALE,
+      duration: 1.15,
+      ease: "power2.in",
+    }, 0);
+
+    tl.to(softGlowRef.current, {
+      autoAlpha: 1,
+      scale: 3,
+      duration: 0.8,
+      ease: "power1.in",
+    }, 0.3);
+
+    tl.to(whiteVeilRef.current, {
+      autoAlpha: 1,
+      duration: 0.5,
+      ease: "power2.in",
+    }, 0.7);
   };
 
   return (
     <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#efeae3]">
-      {/* 舞台：竖屏 9:16，铺满可视高度并居中 */}
       <div
         className="relative overflow-hidden"
         style={{
@@ -110,15 +106,14 @@ export function Scene() {
           maxWidth: "100vw",
         }}
       >
-        {/* 推近容器：点门时整个画面（含夜罩/灯光）朝门里冲 */}
-        <motion.div
+        <div
+          ref={zoomRef}
           className="absolute inset-0"
-          style={{ transformOrigin: DOOR_CENTER_ORIGIN }}
-          variants={zoomVariants}
-          initial="idle"
-          animate={opening ? "open" : "idle"}
+          style={{
+            transformOrigin: DOOR_CENTER_ORIGIN,
+            willChange: "transform",
+          }}
         >
-          {/* 主场景组（L1+L2+L3+L4）：统一时间滤镜 + ±4px 视差 */}
           <motion.div
             className="absolute inset-0"
             style={{
@@ -140,22 +135,22 @@ export function Scene() {
             )}
           </motion.div>
 
-          {/* 时间色温叠色罩：盖在所有图层之上，整场统一染色（夜=蓝紫） */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: mood.tint, transition: "background 1.5s ease" }}
+            style={{
+              background: mood.tint,
+              transition: "background 1.5s ease",
+            }}
           />
 
-          {/* 灯光层：在夜罩之上，让铜灯穿透夜色亮起。随主场景做 ±4px 视差。整层穿透点击，不挡门 */}
           <motion.div
             className="pointer-events-none absolute inset-0"
             style={{ x: sceneX, y: sceneY }}
           >
             <GlowLayer porchLit={mood.porchLit} />
           </motion.div>
-        </motion.div>
+        </div>
 
-        {/* reduced-motion 降级：没有门可点时，整台舞台可点直接进入 */}
         {reduced && (
           <button
             type="button"
@@ -167,16 +162,28 @@ export function Scene() {
         )}
       </div>
 
-      {/* 白光罩：从门洞炸开涌满全屏 → 盖满后跳转平面图 */}
-      <motion.div
-        aria-hidden
+      <div
+        ref={softGlowRef}
         className="pointer-events-none absolute inset-0"
-        style={{ background: "#ffffff" }}
-        variants={flashVariants}
-        initial="hidden"
-        animate={opening ? "open" : "hidden"}
-        onAnimationComplete={(def) => {
-          if (opening && def === "open") goFloorPlan();
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 28%, rgba(255,255,255,0.1) 52%, transparent 72%)",
+          transformOrigin: "50% 55%",
+          transform: "scale(0.5)",
+          opacity: 0,
+          visibility: "hidden",
+          willChange: "transform, opacity",
+        }}
+      />
+
+      <div
+        ref={whiteVeilRef}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "#ffffff",
+          opacity: 0,
+          visibility: "hidden",
+          willChange: "opacity",
         }}
       />
     </div>
