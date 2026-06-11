@@ -77,6 +77,7 @@ export async function saveMemoryItem(item: {
   is_anchor?: boolean;
   source_ref?: string;
 }): Promise<string> {
+  const isProfile = item.type === "profile";
   const { data, error } = await supabase
     .from("memory_items")
     .insert({
@@ -85,7 +86,7 @@ export async function saveMemoryItem(item: {
       valence: item.valence ?? null,
       arousal: item.arousal ?? null,
       tags: item.tags ?? [],
-      is_anchor: item.is_anchor ?? false,
+      is_anchor: isProfile ? true : (item.is_anchor ?? false),
       source_ref: item.source_ref ?? null,
     })
     .select("id")

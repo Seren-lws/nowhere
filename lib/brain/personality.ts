@@ -1,7 +1,7 @@
 import { fetchPersonalityLayers, fetchRecentAssistantMessages } from "./db";
 import type { PersonalityLayer } from "./db";
 import type { MemoryItem } from "./db";
-import { fetchAnchorMemories, retrieveMemories } from "./retrieval";
+import { fetchAnchorMemories, fetchProfileMemories, retrieveMemories } from "./retrieval";
 
 export const DEFAULT_NAME = "某先生";
 
@@ -40,9 +40,10 @@ export const SAVE_MEMORY_TOOL = {
             "preference",
             "habit",
             "relationship",
+            "profile",
           ],
           description:
-            "记忆类型：fact事实/event事件/emotion情绪/promise约定/preference喜好/habit习惯/relationship关系",
+            "记忆类型：fact事实/event事件/emotion情绪/promise约定/preference喜好/habit习惯/relationship关系/profile档案（当发现关于她的稳定个人信息时使用此类型，如姓名、年龄、住所、性格、喜好、逆鳞等）",
         },
         valence: {
           type: "number",
@@ -82,6 +83,14 @@ function layersToPrompt(layers: PersonalityLayer[]): string {
     .map((l) => l.content)
     .join("\n\n");
   return [base, middle, surface].filter(Boolean).join("\n\n");
+}
+
+function profilesToPrompt(profiles: MemoryItem[]): string {
+  if (profiles.length === 0) return "";
+  return (
+    "【她的档案】\n" +
+    profiles.map((m) => `- ${m.content}`).join("\n")
+  );
 }
 
 function memoriesToPrompt(anchors: MemoryItem[], relevant: MemoryItem[]): string {
@@ -125,22 +134,24 @@ export async function buildMessages(
   userText: string,
   mode: ChatMode,
 ): Promise<LLMMessage[]> {
-  const [layers, anchors, relevant, samples] = await Promise.all([
+  const [layers, profiles, anchors, relevant, samples] = await Promise.all([
     fetchPersonalityLayers(),
+    fetchProfileMemories(),
     fetchAnchorMemories(),
     retrieveMemories({ query: userText, limit: 10 }),
     fetchRecentAssistantMessages("living-room", 3),
   ]);
 
   const personalityPrompt = layersToPrompt(layers);
-  const memoryPrompt = memoriesToPrompt(
-    anchors,
-    relevant.filter((m) => !m.is_anchor),
-  );
+  const profilePrompt = profilesToPrompt(profiles);
+  const nonProfileAnchors = anchors.filter((m) => m.type !== "profile");
+  const nonAnchorRelevant = relevant.filter((m) => !m.is_anchor);
+  const memoryPrompt = memoriesToPrompt(nonProfileAnchors, nonAnchorRelevant);
   const samplesPrompt = samplesToPrompt(samples);
 
   const systemParts = [
     personalityPrompt,
+    profilePrompt,
     MEMORY_INSTRUCTION,
     memoryPrompt,
     samplesPrompt,

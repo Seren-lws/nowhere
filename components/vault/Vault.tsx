@@ -251,7 +251,7 @@ export function Vault() {
             background: "#fdf8f8",
             boxShadow: "10px 10px 20px #e0dada, -10px -10px 20px #ffffff",
           }}
-          onClick={() => {}}
+          onClick={() => router.push("/vault/memories")}
         >
           <div className="flex flex-col items-start gap-4 mt-2">
             <div

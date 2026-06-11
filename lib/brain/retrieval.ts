@@ -8,7 +8,8 @@ export type MemoryType =
   | "promise"
   | "preference"
   | "habit"
-  | "relationship";
+  | "relationship"
+  | "profile";
 
 export interface RetrievalOptions {
   query: string;
@@ -49,4 +50,8 @@ export async function retrieveMemories(
 
 export async function fetchAnchorMemories(): Promise<MemoryItem[]> {
   return retrieveMemories({ query: "", anchorOnly: true, limit: 50 });
+}
+
+export async function fetchProfileMemories(): Promise<MemoryItem[]> {
+  return retrieveMemories({ query: "", type: ["profile"], limit: 50 });
 }
