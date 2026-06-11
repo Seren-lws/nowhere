@@ -20,8 +20,8 @@ import {
   roomCenter,
   type RoomRegion,
 } from "@/lib/floorplan/stickers";
-import { ENTERING_FLAG, FLOOD_GRADIENT } from "@/lib/entrance/layout";
-import { useHaptics } from "@/components/entrance/hooks/useHaptics";
+import { ENTERING_FLAG } from "@/lib/entrance/layout";
+import { useHaptics } from "@/components/entrance/useHaptics";
 
 /**
  * 平面图 · 进门后的家（纵向滚动长图）。
@@ -284,7 +284,7 @@ export function FloorPlan() {
       <motion.div
         aria-hidden
         className="pointer-events-none fixed inset-0 z-30"
-        style={{ background: FLOOD_GRADIENT }}
+        style={{ background: "rgba(250, 240, 226, 0.97)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: entering ? 1 : 0 }}
         transition={{ duration: 0.8, ease: "easeIn" }}
@@ -298,7 +298,7 @@ export function FloorPlan() {
         <motion.div
           aria-hidden
           className="pointer-events-none fixed inset-0 z-40"
-          style={{ background: "#ffffff" }}
+          style={{ background: "rgba(250, 240, 226, 1)" }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}

@@ -1,75 +1,56 @@
 "use client";
 
-import { motion, type Variants } from "motion/react";
-import {
-  CAVITY_DARK,
-  CAVITY_INSET_PX,
-  DOOR,
-  TIMELINE,
-  boxToStyle,
-} from "@/lib/entrance/layout";
-
-/**
- * L2 门洞暗底 + L3 门洞光。垫在门扇之下，门开后露出。
- * - L2：与门扇同位同尺寸的柔和暗色矩形（非死黑），四边各向内收 CAVITY_INSET_PX 防露边。
- * - L3：奶油暖光径向渐变 + 模糊 + 呼吸；推门时向外扩散并增亮。低饱和、低对比。
- */
-
-const lightVariants: Variants = {
-  idle: {
-    scale: 1,
-    opacity: 0.55,
-    transition: { duration: 0 },
-  },
-  open: {
-    scale: 1.7,
-    opacity: 1,
-    transition: {
-      delay: TIMELINE.cavityLight.start / 1000,
-      duration: TIMELINE.cavityLight.duration / 1000,
-      ease: "easeOut",
-    },
-  },
-};
+import { motion } from "motion/react";
+import { DOOR, CAVITY_DARK, CAVITY_INSET_PX, boxToStyle } from "@/lib/entrance/layout";
 
 interface DoorCavityProps {
   opening: boolean;
-  /** 色温：随时间氛围联动的暖光中心色 */
-  warm?: string;
 }
 
-export function DoorCavity({
-  opening,
-  warm = "rgba(248, 232, 208, 1)",
-}: DoorCavityProps) {
+export function DoorCavity({ opening }: DoorCavityProps) {
+  const style = boxToStyle(DOOR);
+
   return (
-    <div className="absolute" style={boxToStyle(DOOR)}>
-      {/* L2 柔和暗底 */}
+    <>
+      {/* L2: 门洞暗底 */}
       <div
-        className="absolute rounded-[10%/4%]"
-        style={{ inset: `${CAVITY_INSET_PX}px`, background: CAVITY_DARK }}
+        aria-hidden
+        className="absolute"
+        style={{
+          left: style.left,
+          top: style.top,
+          width: style.width,
+          height: style.height,
+          background: CAVITY_DARK,
+          clipPath: `inset(${CAVITY_INSET_PX}px)`,
+        }}
       />
-      {/* L3 门洞光：呼吸（idle）→ 扩散（open）。奶油暖调、低饱和 */}
+
+      {/* L3: 门洞暖光 */}
       <motion.div
         aria-hidden
-        className="absolute inset-0 rounded-[10%/4%]"
+        className="absolute"
         style={{
-          background: `radial-gradient(62% 56% at 50% 60%, ${warm} 0%, rgba(238,218,192,0.5) 40%, rgba(232,212,190,0) 74%)`,
-          filter: "blur(6px)",
+          left: style.left,
+          top: style.top,
+          width: style.width,
+          height: style.height,
+          background:
+            "radial-gradient(ellipse 80% 70% at 50% 55%, rgba(255,222,160,0.9) 0%, rgba(250,200,130,0.4) 45%, transparent 75%)",
+          clipPath: `inset(${CAVITY_INSET_PX}px)`,
         }}
-        variants={lightVariants}
-        animate={opening ? "open" : "idle"}
-      >
-        {/* 门未开时的微呼吸：叠一层缓慢明灭，不影响 open 的扩散 */}
-        {!opening && (
-          <motion.div
-            className="absolute inset-0 rounded-[10%/4%]"
-            style={{ background: "inherit" }}
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )}
-      </motion.div>
-    </div>
+        initial={{ opacity: 0.5, scale: 1 }}
+        animate={
+          opening
+            ? { opacity: 1, scale: 1.3 }
+            : { opacity: 0.5, scale: 1 }
+        }
+        transition={
+          opening
+            ? { duration: 1.0, ease: "easeOut", delay: 0.3 }
+            : { duration: 0.3 }
+        }
+      />
+    </>
   );
 }
