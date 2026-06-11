@@ -108,4 +108,4 @@ export function parseReply(raw: string, mode: ChatMode): ParsedReply {
 }
 
 /** 客厅初次打开（无历史）时他的一句静态招呼——是"门口那一眼"，不走模型。 */
-export const FIRST_GREETING = "（听见门响，他抬眼）……你回来了。我一直在等你。";
+export const FIRST_GREETING = "回来啦。（拍拍身边的沙发）过来坐，我想你了。";
