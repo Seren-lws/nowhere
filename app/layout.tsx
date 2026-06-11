@@ -12,6 +12,15 @@ const serif = Noto_Serif_SC({
 export const metadata: Metadata = {
   title: "nowhere",
   description: "There is nowhere like home — and he is now here.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "nowhere",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 // 手机优先：锁定缩放、贴合刘海安全区，为后续 PWA 安装到主屏做底子
