@@ -262,7 +262,7 @@ const EFFECTS: Record<string, () => React.ReactNode> = {
 export function FloorPlan() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [activeRoom, setActiveRoom] = useState(ROOMS[0].key);
+  const [activeRoom, setActiveRoom] = useState("living-room");
   const [receding, setReceding] = useState(false);
 
   useEffect(() => {
@@ -274,6 +274,13 @@ export function FloorPlan() {
       /* ignore */
     }
     if (entered) setReceding(true);
+
+    // 进入后默认滚到客厅
+    const t = setTimeout(() => {
+      const el = containerRef.current?.querySelector('section[data-room="living-room"]');
+      if (el) el.scrollIntoView({ behavior: "instant" });
+    }, 50);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
