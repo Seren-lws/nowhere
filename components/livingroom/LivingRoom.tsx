@@ -255,7 +255,7 @@ export function LivingRoom() {
         onScroll={handleScroll}
         className="h-full overflow-y-auto pt-20 pb-40 px-5 max-w-[800px] mx-auto"
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
           {messages.map((m) => (
             <Bubble
               key={m.ts}
@@ -507,11 +507,11 @@ function Bubble({
       >
         <div
           onClick={onSelect}
-          className="rounded-xl p-4 max-w-[75%] whitespace-pre-wrap"
+          className="rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap"
           style={{
             fontFamily: "var(--font-serif-sc)",
-            fontSize: "16px",
-            lineHeight: "28px",
+            fontSize: "14.5px",
+            lineHeight: "24px",
             background: "#ffdad9",
             boxShadow: selected
               ? "0 0 0 2px rgba(123,84,85,0.3), 6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff"
@@ -564,15 +564,15 @@ function Bubble({
             </span>
           </summary>
           <div
-            className="mt-2 rounded-xl p-4 italic whitespace-pre-wrap"
+            className="mt-2 rounded-xl px-3.5 py-2.5 italic whitespace-pre-wrap"
             style={{
               background: "rgba(255,255,255,0.4)",
               backdropFilter: "blur(12px)",
               border: "1px solid rgba(255,255,255,0.2)",
               fontFamily: "var(--font-serif-sc)",
               color: "var(--text-deep)",
-              lineHeight: "1.75",
-              fontSize: "15px",
+              lineHeight: "1.65",
+              fontSize: "13.5px",
             }}
           >
             {content}
@@ -590,11 +590,11 @@ function Bubble({
       className="flex flex-col items-start"
     >
       <div
-        className="neu-flat rounded-xl p-4 max-w-[75%] whitespace-pre-wrap"
+        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap"
         style={{
           fontFamily: "var(--font-serif-sc)",
-          fontSize: "16px",
-          lineHeight: "28px",
+          fontSize: "14.5px",
+          lineHeight: "24px",
           color: "var(--text-deep)",
         }}
       >
