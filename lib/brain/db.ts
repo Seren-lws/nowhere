@@ -6,6 +6,7 @@ export interface PersonalityLayer {
   field_key: string;
   content: string;
   version: number;
+  updated_at: string;
 }
 
 export interface MemoryItem {
