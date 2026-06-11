@@ -143,7 +143,7 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
       >
         <button
           className="p-2 rounded-full hover:bg-[rgba(230,225,225,0.5)] transition-colors active:scale-95"
-          onClick={() => router.push("/vault")}
+          onClick={() => router.back()}
         >
           <span
             className="material-symbols-outlined"

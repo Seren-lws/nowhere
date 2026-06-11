@@ -170,7 +170,7 @@ export function PersonalitySystem() {
   const handleApprove = async (req: ChangeRequest) => {
     await supabase
       .from("personality_layers")
-      .update({ content: req.new_content, version: layers.find(l => l.layer === req.layer && l.field_key === req.field_key)?.version ?? 1 + 1, updated_at: new Date().toISOString() })
+      .update({ content: req.new_content, version: (layers.find(l => l.layer === req.layer && l.field_key === req.field_key)?.version ?? 0) + 1, updated_at: new Date().toISOString() })
       .eq("layer", req.layer)
       .eq("field_key", req.field_key);
     await supabase

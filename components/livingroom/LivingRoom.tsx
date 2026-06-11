@@ -20,7 +20,7 @@ import {
   toContext,
   type ChatMessage,
 } from "@/lib/brain/memory";
-import { sendChat } from "@/lib/brain/client";
+import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -87,12 +87,20 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const raw = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL]);
-      const { inner, parts } = parseReply(raw, mode);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL]);
+      const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
       const acc = [...base];
       let t = Date.now();
+
+      if (resp.savedMemories && resp.savedMemories.length > 0) {
+        await delay(150);
+        acc.push({ role: "memory", content: "", ts: t++, memories: resp.savedMemories });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
       if (inner) {
         await delay(220);
         acc.push({ role: "inner", content: inner, ts: t++ });
@@ -262,21 +270,25 @@ export function LivingRoom() {
         className="h-full overflow-y-auto pt-20 pb-40 px-5 max-w-[800px] mx-auto"
       >
         <div className="flex flex-col gap-3">
-          {messages.map((m) => (
-            <Bubble
-              key={m.ts}
-              role={m.role}
-              content={m.content}
-              selected={selectedTs === m.ts}
-              onSelect={
-                m.role === "user" && !sending
-                  ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts)
-                  : undefined
-              }
-              onEditResend={() => editResend(m.ts)}
-              onRetry={() => retryFrom(m.ts)}
-            />
-          ))}
+          {messages.map((m) =>
+            m.role === "memory" && m.memories ? (
+              <MemoryTag key={m.ts} memories={m.memories} />
+            ) : (
+              <Bubble
+                key={m.ts}
+                role={m.role}
+                content={m.content}
+                selected={selectedTs === m.ts}
+                onSelect={
+                  m.role === "user" && !sending
+                    ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts)
+                    : undefined
+                }
+                onEditResend={() => editResend(m.ts)}
+                onRetry={() => retryFrom(m.ts)}
+              />
+            ),
+          )}
 
           {sending && (
             <motion.div
@@ -629,5 +641,133 @@ function ActionPill({ onClick, children }: { onClick?: () => void; children: Rea
     >
       {children}
     </button>
+  );
+}
+
+/* ─── Memory Tag ─── */
+
+const TYPE_LABELS: Record<string, string> = {
+  fact: "事实",
+  event: "事件",
+  emotion: "情绪",
+  promise: "约定",
+  preference: "喜好",
+  habit: "习惯",
+  relationship: "关系",
+  profile: "档案",
+};
+
+function MemoryTag({ memories }: { memories: SavedMemoryInfo[] }) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex flex-col items-start"
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95"
+        style={{
+          background: "rgba(212,165,165,0.15)",
+          border: "1px solid rgba(212,165,165,0.25)",
+          fontFamily: "var(--font-serif-sc)",
+          fontSize: "12px",
+          color: "var(--primary)",
+        }}
+      >
+        <span
+          className="material-symbols-outlined text-[14px]"
+          style={{ fontVariationSettings: "'FILL' 1" }}
+        >
+          bookmark
+        </span>
+        存入记忆
+        <span
+          className="material-symbols-outlined text-[12px] transition-transform"
+          style={{ transform: open ? "rotate(90deg)" : "none" }}
+        >
+          chevron_right
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden w-full max-w-[85%]"
+          >
+            <div
+              className="mt-2 rounded-xl p-3 flex flex-col gap-2"
+              style={{
+                background: "rgba(212,165,165,0.08)",
+                border: "1px solid rgba(212,165,165,0.15)",
+              }}
+            >
+              {memories.map((m, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px]"
+                      style={{
+                        background: "rgba(212,165,165,0.2)",
+                        color: "var(--primary)",
+                        fontFamily: "var(--font-serif-sc)",
+                      }}
+                    >
+                      {TYPE_LABELS[m.type] || m.type}
+                    </span>
+                    {m.is_anchor && (
+                      <span className="text-[10px]" style={{ color: "var(--primary)" }}>⚓</span>
+                    )}
+                    {m.tags && m.tags.length > 0 && (
+                      <span
+                        className="text-[10px]"
+                        style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}
+                      >
+                        {m.tags.join(" · ")}
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className="text-[13px] leading-relaxed"
+                    style={{
+                      fontFamily: "var(--font-serif-sc)",
+                      color: "var(--text-deep)",
+                    }}
+                  >
+                    {m.content}
+                  </p>
+                  {i < memories.length - 1 && (
+                    <div className="h-px my-1" style={{ background: "rgba(212,165,165,0.12)" }} />
+                  )}
+                </div>
+              ))}
+
+              <button
+                onClick={() => router.push("/vault/memories")}
+                className="flex items-center gap-1 self-end mt-1 px-3 py-1 rounded-full transition-all active:scale-95"
+                style={{
+                  background: "rgba(212,165,165,0.15)",
+                  border: "1px solid rgba(212,165,165,0.2)",
+                  fontFamily: "var(--font-serif-sc)",
+                  fontSize: "11px",
+                  color: "var(--primary)",
+                }}
+              >
+                查看记忆
+                <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

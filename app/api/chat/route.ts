@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { saveMemoryItem } from "@/lib/brain/db";
 
+interface SavedMemory {
+  content: string;
+  type: string;
+  tags?: string[];
+  is_anchor?: boolean;
+}
+
 interface ChatRequest {
   messages: { role: string; content: string }[];
   config: { baseUrl: string; apiKey: string; model: string };
@@ -29,6 +36,7 @@ export async function POST(req: Request) {
   const endpoint = `${config.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   let currentMessages = [...messages];
   const maxToolRounds = 5;
+  const savedMemories: SavedMemory[] = [];
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -121,6 +129,12 @@ export async function POST(req: Request) {
               tags: args.tags,
               is_anchor: args.is_anchor,
             });
+            savedMemories.push({
+              content: args.content,
+              type: args.type,
+              tags: args.tags,
+              is_anchor: args.is_anchor,
+            });
           } catch (e) {
             result = JSON.stringify({
               ok: false,
@@ -144,7 +158,10 @@ export async function POST(req: Request) {
         { status: 502 },
       );
     }
-    return NextResponse.json({ content });
+    return NextResponse.json({
+      content,
+      ...(savedMemories.length > 0 ? { savedMemories } : {}),
+    });
   }
 
   return NextResponse.json(

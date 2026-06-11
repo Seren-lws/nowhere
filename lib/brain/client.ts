@@ -1,11 +1,23 @@
 import type { BrainSettings } from "./config";
 import type { LLMMessage } from "./personality";
 
+export interface SavedMemoryInfo {
+  content: string;
+  type: string;
+  tags?: string[];
+  is_anchor?: boolean;
+}
+
+export interface ChatResponse {
+  content: string;
+  savedMemories?: SavedMemoryInfo[];
+}
+
 export async function sendChat(
   messages: LLMMessage[],
   settings: BrainSettings,
   tools?: unknown[],
-): Promise<string> {
+): Promise<ChatResponse> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -23,19 +35,18 @@ export async function sendChat(
     const e = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(e.error || `请求失败 (${res.status})`);
   }
-  const data = (await res.json()) as { content: string };
-  return data.content;
+  return (await res.json()) as ChatResponse;
 }
 
 export async function testConnection(
   settings: BrainSettings,
 ): Promise<{ ok: boolean; message: string }> {
   try {
-    const reply = await sendChat(
+    const { content } = await sendChat(
       [{ role: "user", content: "连接测试，请只回复两个字：在的" }],
       settings,
     );
-    return { ok: true, message: reply.trim().slice(0, 60) || "（空回复）" };
+    return { ok: true, message: content.trim().slice(0, 60) || "（空回复）" };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }

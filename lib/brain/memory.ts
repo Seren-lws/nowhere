@@ -1,12 +1,15 @@
 import { saveChatMessage, loadChatMessages } from "./db";
 
-export type ChatRole = "user" | "assistant" | "inner";
+import type { SavedMemoryInfo } from "./client";
+
+export type ChatRole = "user" | "assistant" | "inner" | "memory";
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
   ts: number;
   dbId?: string;
+  memories?: SavedMemoryInfo[];
 }
 
 export function toContext(
@@ -14,7 +17,7 @@ export function toContext(
 ): { role: "user" | "assistant"; content: string }[] {
   const out: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of msgs) {
-    if (m.role === "inner") continue;
+    if (m.role === "inner" || m.role === "memory") continue;
     const last = out[out.length - 1];
     if (last && last.role === m.role) {
       last.content += "\n" + m.content;
