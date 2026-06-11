@@ -225,15 +225,15 @@ export function FloorPlan() {
         }}
       />
 
-      {/* 暖光退潮入场（从门口进来时） */}
+      {/* 白光退去入场（从门口白光涌入后，在这里退潮露出家） */}
       {receding && (
         <motion.div
           aria-hidden
           className="pointer-events-none fixed inset-0 z-40"
-          style={{ background: FLOOD_GRADIENT }}
+          style={{ background: "#ffffff" }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           onAnimationComplete={() => setReceding(false)}
         />
       )}

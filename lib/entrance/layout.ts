@@ -96,14 +96,24 @@ export function boxToStyle(box: Box): {
 }
 
 /**
- * 推门动画时序（P0-01 §3）。单位毫秒；节奏感不可变，曲线可调。
+ * 推门动画时序（2026-06-11 重做：镜头推近 + 白光涌入，干脆利落）。单位毫秒。
  */
 export const TIMELINE = {
-  door: { start: 0, duration: 1300 }, // 门扇向内转开
-  cavityLight: { start: 350, duration: 900 }, // 门洞光扩散
-  flood: { start: 700, duration: 900 }, // 全屏暖光淹没（淡入）
-  recede: { start: 1900, duration: 700 }, // 光退潮（在平面图页淡出）
+  door: { start: 0, duration: 750 }, // 门扇快速转开
+  zoom: { start: 0, duration: 850 }, // 镜头朝门里推近
+  cavityLight: { start: 150, duration: 550 }, // 门洞光亮起
+  flash: { start: 250, duration: 550 }, // 白光从门洞炸开涌满全屏
+  recede: { start: 850, duration: 500 }, // 白光退去（在平面图页淡出）
 } as const;
+
+/** 推近的目标倍率与缓动（冲向门，先缓后冲） */
+export const ZOOM_SCALE = 2.2;
+export const ZOOM_EASE: [number, number, number, number] = [0.5, 0, 0.8, 0.4];
+
+/** 推近/白光的原点 = 门扇中心（舞台百分比） */
+export const DOOR_CENTER_ORIGIN = `${DOOR.left + DOOR.width / 2}% ${
+  DOOR.top + DOOR.height / 2
+}%`;
 
 /** 门开到的角度（绕左轴向内，rotateY 负值）与父容器透视 */
 export const DOOR_ROTATE_DEG = -78;

@@ -9,11 +9,13 @@ import {
   type Variants,
 } from "motion/react";
 import {
+  DOOR_CENTER_ORIGIN,
   ENTERING_FLAG,
-  FLOOD_GRADIENT,
   FLOOR_PLAN_ROUTE,
   STAGE_ASPECT,
   TIMELINE,
+  ZOOM_EASE,
+  ZOOM_SCALE,
 } from "@/lib/entrance/layout";
 import { MOCK_ENTRANCE_STATE } from "@/lib/entrance/state";
 import { MainScene } from "./MainScene";
@@ -68,18 +70,33 @@ export function Scene() {
     router.push(FLOOR_PLAN_ROUTE);
   };
 
-  const floodVariants: Variants = {
-    hidden: { opacity: 0 },
+  /** 镜头推近：整个舞台朝门扇中心放大（reduced 时不动） */
+  const zoomVariants: Variants = {
+    idle: { scale: 1 },
     open: {
-      opacity: 1,
-      transition: reduced
-        ? { duration: 0.35 }
-        : {
-            delay: TIMELINE.flood.start / 1000,
-            duration: TIMELINE.flood.duration / 1000,
+      scale: reduced ? 1 : ZOOM_SCALE,
+      transition: {
+        delay: TIMELINE.zoom.start / 1000,
+        duration: TIMELINE.zoom.duration / 1000,
+        ease: ZOOM_EASE,
+      },
+    },
+  };
+
+  /** 白光：从门洞中心炸开成一整片白（clip-path 圆形扩张），盖满后跳转 */
+  const flashVariants: Variants = {
+    hidden: { clipPath: `circle(0% at ${DOOR_CENTER_ORIGIN})`, opacity: 1 },
+    open: reduced
+      ? { clipPath: `circle(150% at ${DOOR_CENTER_ORIGIN})`, opacity: 1, transition: { duration: 0.35 } }
+      : {
+          clipPath: `circle(150% at ${DOOR_CENTER_ORIGIN})`,
+          opacity: 1,
+          transition: {
+            delay: TIMELINE.flash.start / 1000,
+            duration: TIMELINE.flash.duration / 1000,
             ease: "easeIn",
           },
-    },
+        },
   };
 
   return (
@@ -93,42 +110,49 @@ export function Scene() {
           maxWidth: "100vw",
         }}
       >
-        {/* 主场景组（L1+L2+L3+L4）：统一时间滤镜 + ±4px 视差 */}
+        {/* 推近容器：点门时整个画面（含夜罩/灯光）朝门里冲 */}
         <motion.div
           className="absolute inset-0"
-          style={{
-            x: sceneX,
-            y: sceneY,
-            filter: mood.filter,
-            transition: "filter 1.5s ease",
-          }}
+          style={{ transformOrigin: DOOR_CENTER_ORIGIN }}
+          variants={zoomVariants}
+          initial="idle"
+          animate={opening ? "open" : "idle"}
         >
-          <MainScene onOpenSettings={() => router.push("/settings")} />
-          <DoorCavity opening={opening} warm={WARM_BY_TOD[mood.tod]} />
-          {!reduced && (
-            <Door
-              opening={opening}
-              hasUnread={state.hasUnreadMessage}
-              onPushDoor={pushDoor}
-              onOpenMailbox={() => router.push("/mailbox")}
-            />
-          )}
-        </motion.div>
+          {/* 主场景组（L1+L2+L3+L4）：统一时间滤镜 + ±4px 视差 */}
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              x: sceneX,
+              y: sceneY,
+              filter: mood.filter,
+              transition: "filter 1.5s ease",
+            }}
+          >
+            <MainScene onOpenSettings={() => router.push("/settings")} />
+            <DoorCavity opening={opening} warm={WARM_BY_TOD[mood.tod]} />
+            {!reduced && (
+              <Door
+                opening={opening}
+                hasUnread={state.hasUnreadMessage}
+                onPushDoor={pushDoor}
+                onOpenMailbox={() => router.push("/mailbox")}
+              />
+            )}
+          </motion.div>
 
-        {/* 前景花草层（L5）本期按声声反馈撤掉——花草会遮门。素材与组件保留，后续如需再启。 */}
+          {/* 时间色温叠色罩：盖在所有图层之上，整场统一染色（夜=蓝紫） */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: mood.tint, transition: "background 1.5s ease" }}
+          />
 
-        {/* 时间色温叠色罩：盖在所有图层之上，整场统一染色（夜=蓝紫） */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: mood.tint, transition: "background 1.5s ease" }}
-        />
-
-        {/* 灯光层：在夜罩之上，让铜灯穿透夜色亮起。随主场景做 ±4px 视差。整层穿透点击，不挡门 */}
-        <motion.div
-          className="pointer-events-none absolute inset-0"
-          style={{ x: sceneX, y: sceneY }}
-        >
-          <GlowLayer porchLit={mood.porchLit} />
+          {/* 灯光层：在夜罩之上，让铜灯穿透夜色亮起。随主场景做 ±4px 视差。整层穿透点击，不挡门 */}
+          <motion.div
+            className="pointer-events-none absolute inset-0"
+            style={{ x: sceneX, y: sceneY }}
+          >
+            <GlowLayer porchLit={mood.porchLit} />
+          </motion.div>
         </motion.div>
 
         {/* reduced-motion 降级：没有门可点时，整台舞台可点直接进入 */}
@@ -143,12 +167,12 @@ export function Scene() {
         )}
       </div>
 
-      {/* 全屏暖光淹没罩（覆盖整窗，跨越舞台边界）→ 盖满后跳转平面图 */}
+      {/* 白光罩：从门洞炸开涌满全屏 → 盖满后跳转平面图 */}
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{ background: FLOOD_GRADIENT }}
-        variants={floodVariants}
+        style={{ background: "#ffffff" }}
+        variants={flashVariants}
         initial="hidden"
         animate={opening ? "open" : "hidden"}
         onAnimationComplete={(def) => {
