@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DEFAULT_SETTINGS,
   loadSettings,
@@ -43,6 +43,7 @@ function GlassCard({ children }: { children: React.ReactNode }) {
 }
 
 export function SettingsForm() {
+  const router = useRouter();
   const [s, setS] = useState<BrainSettings>(DEFAULT_SETTINGS);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -109,13 +110,13 @@ export function SettingsForm() {
           >
             设 置
           </h1>
-          <Link
-            href="/floor-plan"
+          <button
+            onClick={() => router.back()}
             className="text-[13px] transition-opacity hover:opacity-70"
-            style={{ color: "var(--accent-dusk)", letterSpacing: "1px" }}
+            style={{ color: "var(--accent-dusk)", letterSpacing: "1px", background: "none", border: "none", cursor: "pointer" }}
           >
-            ‹ 回房间
-          </Link>
+            ‹ 返回
+          </button>
         </header>
 
         {/* 中转与模型 */}

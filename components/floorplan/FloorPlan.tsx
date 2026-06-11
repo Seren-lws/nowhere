@@ -180,7 +180,7 @@ function LivingRoomEffects() {
       <div
         className="absolute pointer-events-none z-[5]"
         style={{
-          bottom: "25%",
+          bottom: "35%",
           right: "15%",
           width: "30%",
           height: "25%",
@@ -192,7 +192,7 @@ function LivingRoomEffects() {
       <div
         className="absolute pointer-events-none z-[5]"
         style={{
-          bottom: "28%",
+          bottom: "38%",
           right: "18%",
           width: "24%",
           height: "20%",
@@ -204,7 +204,7 @@ function LivingRoomEffects() {
       <div
         className="absolute pointer-events-none z-[5]"
         style={{
-          bottom: "30%",
+          bottom: "40%",
           right: "20%",
           width: "18%",
           height: "15%",
@@ -221,7 +221,7 @@ function LivingRoomEffects() {
             className="absolute rounded-full"
             style={{
               left: `${e.left}%`,
-              bottom: "30%",
+              bottom: "40%",
               width: e.size,
               height: e.size,
               background: "radial-gradient(circle, rgba(255,180,60,0.9) 0%, rgba(255,120,30,0) 70%)",

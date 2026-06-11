@@ -146,10 +146,10 @@
 
 .pulse-button { animation: pulse-glow 4s infinite ease-in-out; }
 
-/* ─── 房间标签浮动 ─── */
+/* ─── 房间标签浮动 + 泛光 ─── */
 @keyframes gentle-float {
-  0%, 100% { transform: translateY(0); box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
-  50%      { transform: translateY(-8px); box-shadow: 0 0 35px rgba(255, 255, 255, 0.5); }
+  0%, 100% { transform: translateY(0); box-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(212, 165, 165, 0.15); }
+  50%      { transform: translateY(-8px); box-shadow: 0 0 35px rgba(255, 255, 255, 0.5), 0 0 60px rgba(212, 165, 165, 0.3); }
 }
 
 /* ─── 房间特效 ─── */
