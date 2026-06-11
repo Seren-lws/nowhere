@@ -545,34 +545,34 @@ function Bubble({
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="flex flex-col items-start"
       >
-        <details className="w-full max-w-[85%] group">
-          <summary className="flex items-center gap-2 px-2 cursor-pointer list-none italic select-none">
+        <details className="w-full max-w-[85%] group" open>
+          <summary className="flex items-center gap-1.5 px-1 cursor-pointer list-none italic select-none">
             <span
-              className="material-symbols-outlined text-[16px]"
+              className="material-symbols-outlined text-[12px]"
               style={{ color: "var(--accent-wisteria)" }}
             >
               chat_bubble
             </span>
-            <span className="text-[14px]" style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}>
+            <span className="text-[11px]" style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}>
               心声
             </span>
             <span
-              className="material-symbols-outlined text-[16px] transition-transform group-open:rotate-180"
+              className="material-symbols-outlined text-[12px] transition-transform group-open:rotate-180"
               style={{ color: "var(--text-faint)", opacity: 0.4 }}
             >
               expand_more
             </span>
           </summary>
           <div
-            className="mt-2 rounded-xl px-3.5 py-2.5 italic whitespace-pre-wrap"
+            className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap"
             style={{
               background: "rgba(255,255,255,0.4)",
               backdropFilter: "blur(12px)",
               border: "1px solid rgba(255,255,255,0.2)",
               fontFamily: "var(--font-serif-sc)",
               color: "var(--text-deep)",
-              lineHeight: "1.65",
-              fontSize: "13.5px",
+              lineHeight: "1.6",
+              fontSize: "12.5px",
             }}
           >
             {content}
