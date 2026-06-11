@@ -99,6 +99,24 @@
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
+/* ─── 新拟态系统 ─── */
+.neu-flat {
+  background: #fdf8f8;
+  box-shadow: 6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff;
+}
+
+.neu-pressed {
+  background: #fdf8f8;
+  box-shadow: inset 4px 4px 8px #e0dbdb, inset -4px -4px 8px #ffffff;
+}
+
+@keyframes thinking-pulse {
+  0%   { transform: scale(1); opacity: 0.6; box-shadow: 0 0 0 0 rgba(212, 165, 165, 0.4); }
+  50%  { transform: scale(1.1); opacity: 1; box-shadow: 0 0 15px 5px rgba(212, 165, 165, 0.6); }
+  100% { transform: scale(1); opacity: 0.6; box-shadow: 0 0 0 0 rgba(212, 165, 165, 0.4); }
+}
+.pulse-orb { animation: thinking-pulse 3s infinite ease-in-out; }
+
 /* ─── 隐藏滚动条 ─── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
