@@ -8,6 +8,7 @@ import {
   buildMessages,
   DEFAULT_NAME,
   FIRST_GREETING,
+  SAVE_MEMORY_TOOL,
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
@@ -15,6 +16,7 @@ import {
   HISTORY_WINDOW,
   loadHistory,
   saveHistory,
+  saveMessageToDb,
   toContext,
   type ChatMessage,
 } from "@/lib/brain/memory";
@@ -84,7 +86,8 @@ export function LivingRoom() {
     setSending(true);
     setError(null);
     try {
-      const raw = await sendChat(buildMessages(ctx, last.content, mode), settings);
+      const assembled = await buildMessages(ctx, last.content, mode);
+      const raw = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL]);
       const { inner, parts } = parseReply(raw, mode);
       setSending(false);
 
@@ -95,12 +98,14 @@ export function LivingRoom() {
         acc.push({ role: "inner", content: inner, ts: t++ });
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("inner", inner).catch(() => {});
       }
       for (const p of parts) {
         await delay(mode === "sentences" ? 620 : 280);
         acc.push({ role: "assistant", content: p, ts: t++ });
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("assistant", p).catch(() => {});
       }
     } catch (e) {
       setSending(false);
@@ -116,6 +121,7 @@ export function LivingRoom() {
     setMessages(acc);
     saveHistory(acc);
     setInput("");
+    saveMessageToDb("user", text).catch(() => {});
     await requestReply(acc);
   };
 

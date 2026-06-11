@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-
-/**
- * 对话代理：客户端把消息 + 配置（中转站/key/模型）发来，这里转一手去
- * OpenAI-compatible 中转站（yunwu.ai）。key 只在本机内存里过一下，不存储、不记录。
- */
+import { saveMemoryItem } from "@/lib/brain/db";
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
   config: { baseUrl: string; apiKey: string; model: string };
+  tools?: unknown[];
 }
 
 export async function POST(req: Request) {
@@ -18,7 +15,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "请求格式不对" }, { status: 400 });
   }
 
-  const { messages, config } = body;
+  const { messages, config, tools } = body;
   if (!config?.baseUrl || !config?.apiKey || !config?.model) {
     return NextResponse.json(
       { error: "还没配置好：请到设置里填中转站、API Key 和对话模型" },
@@ -30,34 +27,117 @@ export async function POST(req: Request) {
   }
 
   const endpoint = `${config.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  let currentMessages = [...messages];
+  const maxToolRounds = 5;
 
-  try {
-    const upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        temperature: 0.9,
-      }),
-    });
+  for (let round = 0; round < maxToolRounds; round++) {
+    const reqBody: Record<string, unknown> = {
+      model: config.model,
+      messages: currentMessages,
+      temperature: 0.9,
+    };
+    if (tools && tools.length > 0) {
+      reqBody.tools = tools;
+      reqBody.tool_choice = "auto";
+    }
+
+    let upstream: Response;
+    try {
+      upstream = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify(reqBody),
+      });
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error: `连不上中转站：${e instanceof Error ? e.message : String(e)}`,
+        },
+        { status: 502 },
+      );
+    }
 
     const text = await upstream.text();
     if (!upstream.ok) {
-      // 把中转站的报错透传出去（截断，避免过长），方便排查
       return NextResponse.json(
         { error: `中转站返回 ${upstream.status}：${text.slice(0, 300)}` },
         { status: 502 },
       );
     }
 
-    const data = JSON.parse(text) as {
-      choices?: { message?: { content?: string } }[];
+    let data: {
+      choices?: {
+        message?: {
+          content?: string | null;
+          tool_calls?: {
+            id: string;
+            type: string;
+            function: { name: string; arguments: string };
+          }[];
+          role?: string;
+        };
+        finish_reason?: string;
+      }[];
     };
-    const content = data.choices?.[0]?.message?.content;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return NextResponse.json(
+        { error: "中转站返回了无法解析的数据" },
+        { status: 502 },
+      );
+    }
+
+    const choice = data.choices?.[0];
+    const msg = choice?.message;
+
+    if (!msg) {
+      return NextResponse.json(
+        { error: "中转站没有返回内容" },
+        { status: 502 },
+      );
+    }
+
+    if (msg.tool_calls && msg.tool_calls.length > 0) {
+      currentMessages.push({
+        role: "assistant",
+        content: msg.content ?? "",
+        tool_calls: msg.tool_calls,
+      } as unknown as { role: string; content: string });
+
+      for (const tc of msg.tool_calls) {
+        if (tc.function.name === "save_memory") {
+          let result = '{"ok":true}';
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            await saveMemoryItem({
+              content: args.content,
+              type: args.type,
+              valence: args.valence,
+              arousal: args.arousal,
+              tags: args.tags,
+              is_anchor: args.is_anchor,
+            });
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+          currentMessages.push({
+            role: "tool",
+            content: result,
+            tool_call_id: tc.id,
+          } as unknown as { role: string; content: string });
+        }
+      }
+      continue;
+    }
+
+    const content = msg.content;
     if (!content) {
       return NextResponse.json(
         { error: "中转站没有返回内容" },
@@ -65,10 +145,10 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json({ content });
-  } catch (e) {
-    return NextResponse.json(
-      { error: `连不上中转站：${e instanceof Error ? e.message : String(e)}` },
-      { status: 502 },
-    );
   }
+
+  return NextResponse.json(
+    { error: "工具调用轮次过多" },
+    { status: 500 },
+  );
 }

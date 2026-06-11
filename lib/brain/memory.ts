@@ -1,22 +1,14 @@
-/**
- * 大脑层 · 简单记忆（P0）
- *
- * 先本地存这次的对话历史（localStorage）。完整记忆系统（单表 memory_items、
- * 锚点、衰减、原话层、园丁）留给 P1 保险柜，届时替换本模块、客厅无需改动。
- */
+import { saveChatMessage, loadChatMessages } from "./db";
 
-export type ChatRole = "user" | "assistant" | "inner"; // inner = 心声（仅展示，不进上下文）
+export type ChatRole = "user" | "assistant" | "inner";
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
-  /** 毫秒时间戳（写入时由调用方传入，避免在纯函数里取时间） */
   ts: number;
+  dbId?: string;
 }
 
-/**
- * 把展示用的消息转成发给模型的上下文：丢掉心声，合并连续的同角色。
- */
 export function toContext(
   msgs: ChatMessage[],
 ): { role: "user" | "assistant"; content: string }[] {
@@ -34,8 +26,6 @@ export function toContext(
 }
 
 export const CHAT_KEY = "nowhere:chat:living-room";
-
-/** 上下文里最多带多少条历史给模型（简易记忆窗口） */
 export const HISTORY_WINDOW = 30;
 
 export function loadHistory(): ChatMessage[] {
@@ -56,4 +46,38 @@ export function saveHistory(msgs: ChatMessage[]): void {
 export function clearHistory(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(CHAT_KEY);
+}
+
+export async function saveMessageToDb(
+  role: ChatRole,
+  content: string,
+): Promise<string> {
+  return saveChatMessage(role, content);
+}
+
+export async function loadHistoryFromDb(): Promise<ChatMessage[]> {
+  const rows = await loadChatMessages("living-room", 200);
+  return rows.map((r) => ({
+    role: r.role,
+    content: r.content,
+    ts: new Date(r.created_at).getTime(),
+    dbId: r.id,
+  }));
+}
+
+export async function migrateLocalToDb(): Promise<number> {
+  const local = loadHistory();
+  if (local.length === 0) return 0;
+
+  let migrated = 0;
+  for (const m of local) {
+    if (m.dbId) continue;
+    try {
+      await saveChatMessage(m.role, m.content);
+      migrated++;
+    } catch {
+      break;
+    }
+  }
+  return migrated;
 }
