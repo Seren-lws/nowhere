@@ -1,83 +1,175 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AnimatePresence,
-  motion,
-  useScroll,
-  useTransform,
-} from "motion/react";
-import {
-  FIREPLACE,
-  FLOORPLAN_ASPECT,
-  FLOORPLAN_SRC,
-  HE_POINT_BY_ROOM,
-  LANDING_ROOM,
-  MOCK_HOME_STATE,
-  ROOMS,
-  roomCenter,
-  type RoomRegion,
-} from "@/lib/floorplan/stickers";
+import { motion, AnimatePresence } from "motion/react";
 import { ENTERING_FLAG } from "@/lib/entrance/layout";
-import { useHaptics } from "@/components/entrance/useHaptics";
 
-/**
- * 平面图 · 进门后的家（纵向滚动长图）。
- * - 落客厅；上可逛卧室/娱乐室/书房，下到地下保险柜
- * - 客厅 / 保险柜：点 → 镜头推近 → 进房间路由
- * - 书房 / 卧室 / 娱乐室：盖防尘布，点 → 冒"还在装修"气泡，不进
- * - 壁炉火 + 他的光点由 HomeState 驱动（mock，接口留给大脑层）
- */
-export function FloorPlan() {
-  const router = useRouter();
-  const { lightImpact } = useHaptics();
-  const scrollRef = useRef<HTMLDivElement>(null);
+interface RoomDef {
+  key: string;
+  label: string;
+  image: string;
+  bg: string;
+  icon: string;
+  iconActive?: string;
+}
 
-  const [entering, setEntering] = useState<RoomRegion | null>(null);
-  const [originY, setOriginY] = useState(roomCenter(ROOMS[3]));
-  const [wipBubble, setWipBubble] = useState<RoomRegion | null>(null);
-  const [receding, setReceding] = useState(false);
-  const [focusedRoom, setFocusedRoom] = useState(LANDING_ROOM);
-  const focusedRef = useRef(LANDING_ROOM);
+const ROOMS: RoomDef[] = [
+  { key: "study", label: "书房", image: "/rooms/study.jpg", bg: "#fcf8f7", icon: "import_contacts" },
+  { key: "playroom", label: "娱乐室", image: "/rooms/playroom.jpg", bg: "#e9e4f0", icon: "sports_esports" },
+  { key: "bedroom", label: "卧室", image: "/rooms/bedroom.jpg", bg: "#f5eff5", icon: "bed" },
+  { key: "living-room", label: "客厅", image: "/rooms/living-room.jpg", bg: "#fcf7f2", icon: "chair" },
+  { key: "vault", label: "保险柜", image: "/rooms/vault.jpg", bg: "#ece7e7", icon: "favorite_border", iconActive: "favorite" },
+];
 
-  const state = MOCK_HOME_STATE;
-
-  // 轻视差：氛围光层随滚动微微漂移
-  const { scrollY } = useScroll({ container: scrollRef });
-  const glowDrift = useTransform(scrollY, (v) => v * 0.04);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const pct =
-        ((el.scrollTop + el.clientHeight / 2) / el.scrollHeight) * 100;
-      let closest = ROOMS[0];
-      let minDist = Infinity;
-      for (const room of ROOMS) {
-        const d = Math.abs(room.top + room.height / 2 - pct);
-        if (d < minDist) {
-          minDist = d;
-          closest = room;
-        }
-      }
-      if (closest.key !== focusedRef.current) {
-        focusedRef.current = closest.key;
-        setFocusedRoom(closest.key);
-      }
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+function StudyEffects() {
+  const items = useMemo(() => {
+    const particles = Array.from({ length: 40 }, (_, i) => ({
+      id: `p${i}`,
+      size: 2 + ((i * 3) % 4),
+      left: (i * 7 + 3) % 100,
+      top: (i * 11 + 5) % 100,
+      duration: 15 + ((i * 5) % 10),
+      delay: (i * 3) % 10,
+      opacity: 0.2 + ((i * 7) % 5) / 10,
+    }));
+    const bubbles = Array.from({ length: 5 }, (_, i) => ({
+      id: `b${i}`,
+      size: 20 + ((i * 7) % 30),
+      left: (i * 23 + 10) % 100,
+      duration: 12 + ((i * 3) % 8),
+      delay: (i * 4) % 5,
+    }));
+    return { particles, bubbles };
   }, []);
 
-  const heRoom = ROOMS.find((r) => r.key === state.hePresentRoom);
-  const statusText = heRoom
-    ? state.fireplaceLit && state.hePresentRoom === "living-room"
-      ? `他在${heRoom.label}烤火`
-      : `他在${heRoom.label}`
-    : null;
+  return (
+    <>
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        {items.particles.map((p) => (
+          <div
+            key={p.id}
+            className="particle"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              animation: `tyndall-drift ${p.duration}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
+              opacity: p.opacity,
+            }}
+          />
+        ))}
+        {items.bubbles.map((b) => (
+          <div
+            key={b.id}
+            className="bubble"
+            style={{
+              width: b.size,
+              height: b.size,
+              left: `${b.left}%`,
+              animationDuration: `${b.duration}s`,
+              animationDelay: `${b.delay}s`,
+              animation: `bubble-rise ${b.duration}s linear ${b.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+      <div
+        className="absolute inset-0 pointer-events-none z-[5]"
+        style={{
+          background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%)",
+          mixBlendMode: "overlay",
+        }}
+      />
+    </>
+  );
+}
+
+function PlayroomEffects() {
+  return (
+    <>
+      <div
+        className="absolute inset-0 pointer-events-none z-[5]"
+        style={{ animation: "pulse-bg 4s ease-in-out infinite" }}
+      />
+      <div
+        className="absolute pointer-events-none z-[5]"
+        style={{
+          width: 500,
+          height: 500,
+          top: "10%",
+          left: "0%",
+          background: "radial-gradient(circle, rgba(160,200,255,0.4) 0%, transparent 75%)",
+          animation: "screen-chroma 7s infinite alternate ease-in-out",
+        }}
+      />
+    </>
+  );
+}
+
+function BedroomEffects() {
+  return (
+    <>
+      <div
+        className="absolute inset-0 pointer-events-none z-[5]"
+        style={{
+          background: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.3) 0%, transparent 60%)",
+          animation: "moon-breathe 10s ease-in-out infinite",
+        }}
+      />
+      <div className="light-spot" style={{ width: 300, height: 300, top: "20%", left: "10%", animation: "spot-fade 8s ease-in-out infinite" }} />
+      <div className="light-spot" style={{ width: 250, height: 250, top: "50%", left: "60%", animation: "spot-fade 12s ease-in-out infinite 3s" }} />
+      <div className="light-spot" style={{ width: 400, height: 400, top: "10%", left: "40%", animation: "spot-fade 10s ease-in-out infinite 5s" }} />
+      <div className="meteor" style={{ top: "20%", animation: "meteor-trail 12s linear 2s infinite" }} />
+      <div className="meteor" style={{ top: "15%", animation: "meteor-trail 12s linear 8s infinite" }} />
+    </>
+  );
+}
+
+function LivingRoomEffects() {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none z-[5]"
+      style={{
+        background: "radial-gradient(circle at 70% 65%, rgba(255,100,0,0.4) 0%, transparent 40%)",
+        animation: "fire-glow-pulse 2s infinite",
+      }}
+    />
+  );
+}
+
+function VaultEffects() {
+  return (
+    <div
+      className="absolute rounded-full pointer-events-none z-[5]"
+      style={{
+        top: "35%",
+        left: "50%",
+        width: 220,
+        height: 220,
+        background: "rgba(96, 165, 250, 0.2)",
+        transform: "translate(-50%, -50%)",
+        animation: "core-intense 3.5s ease-in-out infinite, heartbeat 2s ease-in-out infinite",
+      }}
+    />
+  );
+}
+
+const EFFECTS: Record<string, () => React.ReactNode> = {
+  study: StudyEffects,
+  playroom: PlayroomEffects,
+  bedroom: BedroomEffects,
+  "living-room": LivingRoomEffects,
+  vault: VaultEffects,
+};
+
+export function FloorPlan() {
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeRoom, setActiveRoom] = useState(ROOMS[0].key);
+  const [receding, setReceding] = useState(false);
 
   useEffect(() => {
     let entered = false;
@@ -88,223 +180,160 @@ export function FloorPlan() {
       /* ignore */
     }
     if (entered) setReceding(true);
-
-    // 初始定位到客厅
-    const el = scrollRef.current;
-    if (el) {
-      const land = ROOMS.find((r) => r.key === LANDING_ROOM)!;
-      const target =
-        (roomCenter(land) / 100) * el.scrollHeight - el.clientHeight / 2;
-      el.scrollTo({ top: Math.max(0, target), behavior: "auto" });
-    }
   }, []);
 
-  const onTapRoom = (room: RoomRegion) => {
-    if (entering) return;
-    lightImpact();
-    if (room.status === "open") {
-      // 镜头推近该层后进入
-      const el = scrollRef.current;
-      if (el) {
-        const target =
-          (roomCenter(room) / 100) * el.scrollHeight - el.clientHeight / 2;
-        el.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-      }
-      setOriginY(roomCenter(room));
-      window.setTimeout(() => setEntering(room), 360);
-    } else {
-      // 防尘布房间：冒气泡
-      setWipBubble(room);
-      window.setTimeout(() => setWipBubble((b) => (b === room ? null : b)), 2200);
-    }
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const sections = container.querySelectorAll<HTMLElement>("section[data-room]");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute("data-room");
+            if (id) setActiveRoom(id);
+          }
+        }
+      },
+      { root: container, threshold: 0.6 },
+    );
+
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToRoom = (key: string) => {
+    const el = containerRef.current?.querySelector(`section[data-room="${key}"]`);
+    el?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <main
-      ref={scrollRef}
-      className="relative h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#efeae3]"
-    >
-      {/* 设置入口：右上角的液态磨砂齿轮，滚动时一直在 */}
-      <Link
-        href="/settings"
-        aria-label="设置"
-        className="fixed right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md transition hover:rotate-45"
-        style={{
-          background: "var(--card-bg)",
-          border: "1px solid var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          color: "var(--accent-dusk)",
-        }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </Link>
-      {/* 可推近的内容容器 */}
-      <motion.div
-        className="relative mx-auto w-full max-w-[460px]"
-        animate={{ scale: entering ? 1.65 : 1 }}
-        transition={{ duration: 0.8, ease: [0.5, 0, 0.4, 1] }}
-        style={{ transformOrigin: `50% ${originY}%` }}
-      >
-        <div className="relative w-full" style={{ aspectRatio: `${FLOORPLAN_ASPECT}` }}>
-          <img
-            src={FLOORPLAN_SRC}
-            alt="家的剖面平面图"
-            draggable={false}
-            className="pointer-events-none absolute inset-0 h-full w-full select-none"
-          />
+    <div className="fixed inset-0" style={{ background: "#fdf8f8" }}>
+      {/* Header */}
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] z-[100] h-16 flex items-center justify-between px-5 bg-white/20 backdrop-blur-xl border-b border-white/30">
+        <button
+          className="active:scale-95 transition-transform"
+          aria-label="菜单"
+        >
+          <span className="material-symbols-outlined text-[28px]" style={{ color: "var(--primary)" }}>
+            menu
+          </span>
+        </button>
+        <h1
+          className="text-[32px] mt-1"
+          style={{
+            fontFamily: "var(--font-cursive)",
+            color: "var(--primary)",
+          }}
+        >
+          Nowhere
+        </h1>
+        <button
+          className="active:scale-95 transition-transform"
+          aria-label="设置"
+          onClick={() => router.push("/settings")}
+        >
+          <span className="material-symbols-outlined text-[28px]" style={{ color: "var(--primary)" }}>
+            settings
+          </span>
+        </button>
+      </header>
 
-          {/* 氛围光层（轻视差）：壁炉火 + 他的光点。
-              用宽度定方形（aspectRatio:1）保证是圆而非竖条；正常混合，暖光在亮底上可见。 */}
-          <motion.div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{ y: glowDrift }}
-          >
-            {state.fireplaceLit && (
-              <motion.div
-                className="absolute rounded-full"
-                style={{
-                  left: `${FIREPLACE.left}%`,
-                  top: `${FIREPLACE.top}%`,
-                  width: `${FIREPLACE.size}%`,
-                  aspectRatio: "1",
-                  transform: "translate(-50%, -50%)",
-                  background:
-                    "radial-gradient(circle at 50% 58%, rgba(246,166,98,0.85) 0%, rgba(240,150,86,0.4) 42%, rgba(240,150,86,0) 72%)",
-                }}
-                animate={{ opacity: [0.7, 1, 0.78, 0.96, 0.7], scale: [0.96, 1.06, 0.98, 1.04, 0.96] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-              />
-            )}
-            {state.hePresentRoom && HE_POINT_BY_ROOM[state.hePresentRoom] && (
-              <motion.div
-                className="absolute rounded-full"
-                style={{
-                  left: `${HE_POINT_BY_ROOM[state.hePresentRoom].left}%`,
-                  top: `${HE_POINT_BY_ROOM[state.hePresentRoom].top}%`,
-                  width: "5.5%",
-                  aspectRatio: "1",
-                  transform: "translate(-50%, -50%)",
-                  // 他的光点（蓝色）。后期他的形象定下来可换成 QQ 小人坐在此处。
-                  background:
-                    "radial-gradient(circle, rgba(150,178,224,0.9) 0%, rgba(176,196,232,0.45) 46%, rgba(176,196,232,0) 72%)",
-                }}
-                animate={{ opacity: [0.6, 1, 0.6], scale: [0.9, 1.12, 0.9] }}
-                transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-              />
-            )}
-          </motion.div>
-
-          {/* 手写层标注——滚到哪层浮出哪层的名字 */}
-          {ROOMS.map((room) => (
-            <div
-              key={`label-${room.key}`}
-              className="pointer-events-none absolute transition-all duration-700 ease-out"
-              style={{
-                top: `${room.top + room.height * 0.48}%`,
-                left: "6%",
-                fontFamily: "var(--font-handwrite)",
-                fontWeight: 300,
-                fontSize: "clamp(0.6rem, 2.2vw, 0.78rem)",
-                color: "rgba(107, 100, 144, 0.55)",
-                letterSpacing: "1.5px",
-                transform: "rotate(-1.5deg)",
-                opacity: focusedRoom === room.key ? 0.85 : 0,
-              }}
+      {/* Scroll-snap container */}
+      <main
+        ref={containerRef}
+        className="h-full overflow-y-scroll no-scrollbar"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
+        {ROOMS.map((room) => {
+          const EffectComponent = EFFECTS[room.key];
+          return (
+            <section
+              key={room.key}
+              data-room={room.key}
+              className="relative h-[100vh] w-full overflow-hidden flex items-center justify-center"
+              style={{ scrollSnapAlign: "start", background: room.bg }}
             >
-              {room.label}
-            </div>
-          ))}
+              <img
+                src={room.image}
+                alt={room.label}
+                className="absolute inset-0 w-full h-full object-cover"
+                draggable={false}
+              />
 
-          {/* 五层热区 */}
-          {ROOMS.map((room) => (
+              {EffectComponent && <EffectComponent />}
+
+              <div className="watercolor-overlay" />
+
+              {/* Room label */}
+              <div
+                className="absolute liquid-glass z-20"
+                style={{
+                  bottom: "15vh",
+                  right: "10vw",
+                  padding: "0.75rem 2rem",
+                  borderRadius: 9999,
+                  animation: "gentle-float 4s ease-in-out infinite",
+                }}
+              >
+                <span
+                  className="text-[24px] tracking-[0.3em]"
+                  style={{
+                    fontFamily: "var(--font-serif-sc)",
+                    color: "var(--primary)",
+                  }}
+                >
+                  {room.label}
+                </span>
+              </div>
+            </section>
+          );
+        })}
+        <div className="h-20 w-full" />
+      </main>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[100] h-16 liquid-glass rounded-full flex items-center justify-around px-4">
+        {ROOMS.map((room) => {
+          const isActive = activeRoom === room.key;
+          const icon = isActive && room.iconActive ? room.iconActive : room.icon;
+          return (
             <button
               key={room.key}
-              type="button"
-              aria-label={room.status === "open" ? `进入${room.label}` : `${room.label}（装修中）`}
-              className="absolute left-0 w-full cursor-pointer outline-none"
-              style={{ top: `${room.top}%`, height: `${room.height}%` }}
-              onClick={() => onTapRoom(room)}
-              disabled={!!entering}
+              className="p-3 rounded-full transition-all duration-300"
+              style={
+                isActive
+                  ? {
+                      background: "rgba(255,255,255,0.4)",
+                      boxShadow: "inset 0 0 10px rgba(255,255,255,0.5)",
+                      color: "var(--primary)",
+                    }
+                  : { color: "rgba(80,68,68,0.5)" }
+              }
+              onClick={() => scrollToRoom(room.key)}
+              aria-label={room.label}
             >
-              {/* 防尘布：未完工房间盖一层柔和半透明罩 */}
-              {room.status === "wip" && (
-                <span
-                  aria-hidden
-                  className="absolute inset-[3%] rounded-[6px]"
-                  style={{
-                    background:
-                      "linear-gradient(160deg, rgba(244,240,234,0.66), rgba(232,226,220,0.58))",
-                    boxShadow: "inset 0 1px 6px rgba(120,110,120,0.15)",
-                  }}
-                />
-              )}
+              <span className="material-symbols-outlined">{icon}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
+      </nav>
 
-        {statusText && (
-          <div
-            className="pointer-events-none py-5 text-center"
-            style={{
-              fontFamily: "var(--font-handwrite)",
-              fontWeight: 300,
-              fontSize: "clamp(0.65rem, 2.2vw, 0.8rem)",
-              color: "rgba(107, 100, 144, 0.4)",
-              letterSpacing: "2px",
-            }}
-          >
-            {statusText}
-          </div>
-        )}
-      </motion.div>
-
-      {/* 还在装修气泡（视口居中，自动消失） */}
+      {/* Entrance recede overlay */}
       <AnimatePresence>
-        {wipBubble && (
+        {receding && (
           <motion.div
-            key={wipBubble.key}
-            className="pointer-events-none fixed left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
-            <div className="rounded-2xl bg-white/85 px-5 py-3 text-sm text-zinc-600 shadow-lg backdrop-blur-sm">
-              {wipBubble.label}这间还在装修～
-            </div>
-          </motion.div>
+            className="fixed inset-0 z-[200] pointer-events-none"
+            style={{ background: "rgba(255, 249, 242, 1)" }}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            onAnimationComplete={() => setReceding(false)}
+          />
         )}
       </AnimatePresence>
-
-      {/* 镜头推近时的奶油渐隐罩 → 盖满后进房间 */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-30"
-        style={{ background: "rgba(250, 240, 226, 0.97)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: entering ? 1 : 0 }}
-        transition={{ duration: 0.8, ease: "easeIn" }}
-        onAnimationComplete={() => {
-          if (entering) router.push(entering.route);
-        }}
-      />
-
-      {/* 白光退去入场（从门口白光涌入后，在这里退潮露出家） */}
-      {receding && (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 z-40"
-          style={{ background: "rgba(250, 240, 226, 1)" }}
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          onAnimationComplete={() => setReceding(false)}
-        />
-      )}
-    </main>
+    </div>
   );
 }

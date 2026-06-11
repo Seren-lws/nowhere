@@ -1,164 +1,167 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useState, useCallback, useMemo } from "react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { ENTERING_FLAG, FLOOR_PLAN_ROUTE } from "@/lib/entrance/layout";
 
-import {
-  STAGE_ASPECT,
-  ASSETS,
-  DOORPLATE,
-  boxToStyle,
-  ENTERING_FLAG,
-  FLOOR_PLAN_ROUTE,
-} from "@/lib/entrance/layout";
-import { MOCK_ENTRANCE_STATE } from "@/lib/entrance/state";
+function Petals() {
+  const petals = useMemo(
+    () =>
+      Array.from({ length: 15 }, (_, i) => {
+        const w = 6 + ((i * 7 + 3) % 8);
+        return {
+          id: i,
+          width: w,
+          height: w * 1.2,
+          left: ((i * 17 + 5) % 80) - 20,
+          top: ((i * 13 + 2) % 30) - 20,
+          duration: 8 + ((i * 3) % 8),
+          delay: ((i * 5) % 15),
+        };
+      }),
+    [],
+  );
 
-import { DoorCavity } from "./DoorCavity";
-import { DoorLayer } from "./DoorLayer";
-import { PorchGlow } from "./PorchGlow";
-import { AmbientMotes } from "./AmbientMotes";
-import { useTimeOfDay } from "./useTimeOfDay";
-import { useHaptics } from "./useHaptics";
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[5]" aria-hidden>
+      {petals.map((p) => (
+        <div
+          key={p.id}
+          className="petal"
+          style={{
+            width: p.width,
+            height: p.height,
+            left: `${p.left}%`,
+            top: `${p.top}%`,
+            animation: `drift ${p.duration}s linear ${p.delay}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function EntranceScene() {
   const router = useRouter();
-  const prefersReduced = useReducedMotion();
-  const { filter, tint, porchLit } = useTimeOfDay();
-  const { lightImpact } = useHaptics();
-  const [opening, setOpening] = useState(false);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [entering, setEntering] = useState(false);
 
-  const goFloorPlan = useCallback(() => {
+  const handleEnter = useCallback(() => {
+    if (entering) return;
+    setEntering(true);
+  }, [entering]);
+
+  const handleLightComplete = useCallback(() => {
+    if (!entering) return;
     try {
       sessionStorage.setItem(ENTERING_FLAG, "1");
     } catch {
       /* incognito */
     }
     router.push(FLOOR_PLAN_ROUTE);
-  }, [router]);
-
-  const handlePush = useCallback(() => {
-    if (opening) return;
-    lightImpact();
-    setOpening(true);
-  }, [opening, lightImpact]);
-
-  const handleMailbox = useCallback(() => {
-    router.push("/mailbox");
-  }, [router]);
-
-  const handleDoorplateDown = useCallback(() => {
-    longPressTimer.current = setTimeout(() => {
-      router.push("/settings");
-    }, 800);
-  }, [router]);
-
-  const handleDoorplateUp = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
-  const warmVeilComplete = useCallback(() => {
-    goFloorPlan();
-  }, [goFloorPlan]);
+  }, [entering, router]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-[var(--bg-dream)]">
-      {/* 舞台：固定比例容器居中 */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{
-          aspectRatio: STAGE_ASPECT,
-          height: "100%",
-          maxWidth: "100vw",
-          filter,
-          transition: "filter 2s ease",
-        }}
-      >
-        {/* L1: 背景画 */}
-        <Image
-          src={ASSETS.scene}
-          alt="入口水彩画"
-          fill
-          priority
-          draggable={false}
-          className="select-none object-cover"
-        />
-
-        {/* 时间氛围罩 */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{ background: tint, transition: "background 2s ease" }}
-        />
-
-        {/* L2 + L3: 门洞 */}
-        <DoorCavity opening={opening} />
-
-        {/* L4: 门扇 */}
-        <DoorLayer
-          opening={opening}
-          onPush={handlePush}
-          onMailbox={handleMailbox}
-        />
-
-        {/* 门廊灯 */}
-        <PorchGlow porchLit={porchLit} />
-
-        {/* 氛围光斑 */}
-        <AmbientMotes count={6} />
-
-        {/* 门牌 No.0 长按 → 设置 */}
-        <button
-          aria-label="门牌 — 长按进设置"
-          className="absolute border-none bg-transparent p-0"
-          style={boxToStyle(DOORPLATE)}
-          onPointerDown={handleDoorplateDown}
-          onPointerUp={handleDoorplateUp}
-          onPointerLeave={handleDoorplateUp}
-        />
-
-        {/* "欢迎回家" */}
-        <motion.p
-          className="pointer-events-none absolute left-1/2 select-none"
-          style={{
-            bottom: "5%",
-            transform: "translateX(-50%) rotate(-1.5deg)",
-            fontFamily: "var(--font-handwrite)",
-            fontSize: "clamp(0.7rem, 2.5vw, 0.85rem)",
-            color: "rgba(107, 100, 144, 0.35)",
-            letterSpacing: "3px",
-            whiteSpace: "nowrap",
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: opening ? 0 : 1 }}
-          transition={
-            opening
-              ? { duration: 0.3, ease: "easeOut" }
-              : { delay: 1, duration: 0.8 }
-          }
-        >
-          欢迎回家
-        </motion.p>
-      </div>
-
-      {/* 暖纱：推门后全屏暖色覆盖 → 跳转 */}
+    <div className="fixed inset-0 overflow-hidden" style={{ background: "#fdf8f8" }}>
+      {/* Background with zoom */}
       <motion.div
-        className="pointer-events-none fixed inset-0 z-50"
-        style={{ background: "rgba(250, 240, 226, 0.97)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: opening ? 1 : 0 }}
-        transition={
-          prefersReduced
-            ? { duration: 0.35, ease: "easeIn" }
-            : { duration: 0.7, ease: "easeIn", delay: 0.8 }
-        }
+        className="fixed inset-0 bg-center bg-cover"
+        style={{ backgroundImage: "url('/rooms/entrance.jpg')" }}
+        animate={entering ? { scale: 1.5 } : { scale: 1 }}
+        transition={{ duration: 2.5, ease: [0.4, 0, 0.2, 1] }}
+      />
+
+      <Petals />
+
+      {/* Main layout */}
+      <motion.div
+        className="relative z-10 flex flex-col h-full w-full max-w-[800px] mx-auto"
+        animate={entering ? { opacity: 0, scale: 1.05 } : { opacity: 1, scale: 1 }}
+        transition={{ duration: 1.2, ease: "easeOut" }}
+      >
+        {/* Header */}
+        <header className="fixed top-0 w-full z-50 backdrop-blur-md border-b border-white/10 max-w-[800px] left-1/2 -translate-x-1/2">
+          <div className="flex justify-between items-center px-5 py-4">
+            <button
+              className="active:scale-95 transition-transform"
+              aria-label="设置"
+              onClick={() => router.push("/settings")}
+            >
+              <span
+                className="material-symbols-outlined text-[28px]"
+                style={{ color: "var(--primary)" }}
+              >
+                settings_heart
+              </span>
+            </button>
+            <h1
+              className="text-[36px] tracking-wide"
+              style={{
+                fontFamily: "var(--font-cursive)",
+                color: "var(--primary)",
+                textShadow:
+                  "0 0 15px rgba(255,255,255,0.8), 0 0 5px rgba(123,84,85,0.2)",
+              }}
+            >
+              Nowhere
+            </h1>
+            <div className="w-[28px]" />
+          </div>
+        </header>
+
+        {/* Door button */}
+        <div
+          className="absolute"
+          style={{ top: "55%", left: "47%", transform: "translate(-50%, -50%)" }}
+        >
+          <button
+            className="liquid-glass rounded-full px-8 py-6 flex flex-col items-center gap-2 active:scale-95 transition-all duration-700 pulse-button"
+            onClick={handleEnter}
+          >
+            <span
+              className="material-symbols-outlined text-[36px]"
+              style={{
+                color: "var(--primary)",
+                fontVariationSettings: "'FILL' 0, 'wght' 300",
+              }}
+            >
+              door_open
+            </span>
+            <span
+              className="text-[20px] tracking-[0.2em] font-bold"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                color: "var(--primary)",
+              }}
+            >
+              欢迎回家
+            </span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Light expansion */}
+      <motion.div
+        className="fixed z-[90] pointer-events-none rounded-full"
+        style={{
+          top: "55%",
+          left: "47%",
+          width: 10,
+          height: 10,
+          background: "#FFF9F2",
+          boxShadow: "0 0 100px 50px #FFF9F2",
+          x: "-50%",
+          y: "-50%",
+        }}
+        initial={{ scale: 0 }}
+        animate={{ scale: entering ? 350 : 0 }}
+        transition={{
+          duration: 1.8,
+          ease: [0.6, 0, 0.4, 1],
+          delay: entering ? 0.1 : 0,
+        }}
         onAnimationComplete={() => {
-          if (opening) warmVeilComplete();
+          if (entering) handleLightComplete();
         }}
       />
     </div>

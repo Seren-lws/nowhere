@@ -22,14 +22,13 @@ export const metadata: Metadata = {
   },
 };
 
-// 手机优先：锁定缩放、贴合刘海安全区，为后续 PWA 安装到主屏做底子
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#eee9f0",
+  themeColor: "#fdf8f8",
 };
 
 export default function RootLayout({
@@ -47,7 +46,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@300;400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@300;400&family=Great+Vibes&family=Be+Vietnam+Pro:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>

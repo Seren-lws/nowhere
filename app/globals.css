@@ -1,11 +1,16 @@
 @import "tailwindcss";
 
-/* ─── nowhere 设计基因（参考旧家 cyber-home，雾紫梦境 + 水彩奶白） ─── */
+/* ─── nowhere 设计基因 ─── */
 :root {
   --font-handwrite: "LXGW WenKai", cursive;
+  --font-cursive: "Great Vibes", cursive;
+  --font-serif-sc: "Noto Serif SC", serif;
   --bg-dream: #eee9f0;
+  --bg-surface: #fdf8f8;
   --bg-gradient: linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%);
 
+  --primary: #7b5455;
+  --primary-container: #d4a5a5;
   --mist-lavender: #cdc1d9;
   --blush: #e8c4c4;
   --blush-glow: rgba(232, 196, 196, 0.25);
@@ -48,6 +53,7 @@
   --color-foreground: var(--text-deep);
 }
 
+/* ─── 通用液态玻璃 ─── */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
@@ -80,8 +86,166 @@
   box-shadow: var(--glass-shadow-hover);
 }
 
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.2), 0 8px 32px 0 rgba(123, 84, 85, 0.1);
+}
+
+/* ─── Material Symbols ─── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ─── 隐藏滚动条 ─── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── 花瓣飘落 ─── */
+.petal {
+  position: absolute;
+  background: #ffdad9;
+  border-radius: 150% 0 150% 0;
+  opacity: 0.6;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+
+@keyframes drift {
+  0%   { transform: translate(0, -10vh) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.4; }
+  100% { transform: translate(100vw, 110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ─── 入口按钮脉冲 ─── */
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(212, 165, 165, 0.3); }
+  50%      { transform: scale(1.03); box-shadow: 0 0 35px rgba(212, 165, 165, 0.5); }
+}
+
+.pulse-button { animation: pulse-glow 4s infinite ease-in-out; }
+
+/* ─── 房间标签浮动 ─── */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+  50%      { transform: translateY(-8px); box-shadow: 0 0 35px rgba(255, 255, 255, 0.5); }
+}
+
+/* ─── 房间特效 ─── */
+@keyframes tyndall-drift {
+  0%   { transform: translate(-10%, -10%) scale(1); opacity: 0; }
+  20%  { opacity: 0.7; }
+  50%  { transform: translate(20%, 30%) scale(1.5); }
+  80%  { opacity: 0.4; }
+  100% { transform: translate(50%, 60%) scale(1.2); opacity: 0; }
+}
+
+@keyframes screen-chroma {
+  0%, 100% { filter: blur(40px) hue-rotate(0deg); opacity: 0.4; transform: scale(1); }
+  33%      { filter: blur(55px) hue-rotate(90deg); opacity: 0.6; transform: scale(1.05); }
+  66%      { filter: blur(45px) hue-rotate(240deg); opacity: 0.5; transform: scale(0.98); }
+}
+
+@keyframes pulse-bg {
+  0%, 100% { background-color: rgba(200, 220, 255, 0.05); }
+  50%      { background-color: rgba(200, 220, 255, 0.12); }
+}
+
+@keyframes moon-breathe {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.15); }
+}
+
+@keyframes meteor-trail {
+  0%   { transform: translate(120vw, -20vh) rotate(-35deg); width: 0; opacity: 1; }
+  10%  { width: 150px; }
+  20%  { transform: translate(-20vw, 40vh) rotate(-35deg); width: 0; opacity: 0; }
+  100% { transform: translate(-20vw, 40vh) rotate(-35deg); width: 0; opacity: 0; }
+}
+
+@keyframes fire-glow-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(1.2); }
+}
+
+@keyframes core-intense {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(40px) brightness(1);
+    box-shadow: 0 0 60px rgba(180, 220, 255, 0.4), inset 0 0 30px rgba(255,255,255,0.2);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.4);
+    filter: blur(60px) brightness(1.6);
+    box-shadow: 0 0 120px rgba(180, 220, 255, 0.8), inset 0 0 50px rgba(255,255,255,0.5);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes spot-fade {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50%      { opacity: 0.3; transform: scale(1.2); }
+}
+
+@keyframes bubble-rise {
+  0%   { transform: translateY(100vh) translateX(0) scale(0.5); opacity: 0; }
+  20%  { opacity: 0.4; }
+  50%  { transform: translateY(50vh) translateX(20px) scale(1); }
+  80%  { opacity: 0.4; }
+  100% { transform: translateY(-10vh) translateX(-20px) scale(0.8); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 75%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  opacity: 0;
+}
+
+.meteor {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
+  border-radius: 999px;
+  opacity: 0;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+  box-shadow: inset 0 0 10px rgba(255,255,255,0.3), 0 0 15px rgba(255,255,255,0.1);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+
+.light-spot {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.watercolor-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://www.transparenttextures.com/patterns/handmade-paper.png');
+  opacity: 0.12;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: 10;
+}
+
 body {
-  background: var(--bg-dream);
+  background: var(--bg-surface);
   color: var(--text-deep);
   font-family: var(--font-serif), "Noto Serif SC", "Songti SC", serif;
   letter-spacing: 0.4px;
