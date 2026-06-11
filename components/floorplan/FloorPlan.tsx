@@ -12,14 +12,15 @@ interface RoomDef {
   bg: string;
   icon: string;
   iconActive?: string;
+  href?: string;
 }
 
 const ROOMS: RoomDef[] = [
-  { key: "study", label: "书房", image: "/rooms/study.jpg", bg: "#fcf8f7", icon: "import_contacts" },
-  { key: "playroom", label: "娱乐室", image: "/rooms/playroom.png", bg: "#e9e4f0", icon: "sports_esports" },
-  { key: "bedroom", label: "卧室", image: "/rooms/bedroom.jpg", bg: "#f5eff5", icon: "bed" },
-  { key: "living-room", label: "客厅", image: "/rooms/living-room.jpg", bg: "#fcf7f2", icon: "chair" },
-  { key: "vault", label: "保险柜", image: "/rooms/vault.jpg", bg: "#ece7e7", icon: "favorite_border", iconActive: "favorite" },
+  { key: "study", label: "书房", image: "/rooms/study.jpg", bg: "#fcf8f7", icon: "import_contacts", href: "/study" },
+  { key: "playroom", label: "娱乐室", image: "/rooms/playroom.png", bg: "#e9e4f0", icon: "sports_esports", href: "/playroom" },
+  { key: "bedroom", label: "卧室", image: "/rooms/bedroom.jpg", bg: "#f5eff5", icon: "bed", href: "/bedroom" },
+  { key: "living-room", label: "客厅", image: "/rooms/living-room.jpg", bg: "#fcf7f2", icon: "chair", href: "/living-room" },
+  { key: "vault", label: "保险柜", image: "/rooms/vault.jpg", bg: "#ece7e7", icon: "favorite_border", iconActive: "favorite", href: "/vault" },
 ];
 
 function StudyEffects() {
@@ -360,15 +361,17 @@ export function FloorPlan() {
               <div className="watercolor-overlay" />
 
               {/* Room label */}
-              <div
-                className="absolute liquid-glass z-20"
+              <button
+                className="absolute liquid-glass z-20 active:scale-95 transition-transform cursor-pointer"
                 style={{
                   bottom: "22vh",
                   right: "10vw",
                   padding: "0.75rem 2rem",
                   borderRadius: 9999,
                   animation: "gentle-float 4s ease-in-out infinite",
+                  border: "none",
                 }}
+                onClick={() => room.href && router.push(room.href)}
               >
                 <span
                   className="text-[24px] tracking-[0.3em]"
@@ -379,7 +382,7 @@ export function FloorPlan() {
                 >
                   {room.label}
                 </span>
-              </div>
+              </button>
             </section>
           );
         })}
