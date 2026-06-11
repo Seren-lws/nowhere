@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
 
-// 全家统一的衬线宋体（旧家审美的灵魂之一）
 const serif = Noto_Serif_SC({
   variable: "--font-serif",
   subsets: ["latin"],
@@ -40,6 +39,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className={`${serif.variable} h-full antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@300;400&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

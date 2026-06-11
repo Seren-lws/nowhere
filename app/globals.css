@@ -2,6 +2,7 @@
 
 /* ─── nowhere 设计基因（参考旧家 cyber-home，雾紫梦境 + 水彩奶白） ─── */
 :root {
+  --font-handwrite: "LXGW WenKai", cursive;
   --bg-dream: #eee9f0;
   --bg-gradient: linear-gradient(160deg, #f4f0fa 0%, #ece5f5 100%);
 

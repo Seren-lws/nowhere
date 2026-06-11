@@ -36,9 +36,11 @@ export function FloorPlan() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [entering, setEntering] = useState<RoomRegion | null>(null);
-  const [originY, setOriginY] = useState(roomCenter(ROOMS[3])); // 默认客厅
+  const [originY, setOriginY] = useState(roomCenter(ROOMS[3]));
   const [wipBubble, setWipBubble] = useState<RoomRegion | null>(null);
   const [receding, setReceding] = useState(false);
+  const [focusedRoom, setFocusedRoom] = useState(LANDING_ROOM);
+  const focusedRef = useRef(LANDING_ROOM);
 
   const state = MOCK_HOME_STATE;
 
@@ -46,7 +48,37 @@ export function FloorPlan() {
   const { scrollY } = useScroll({ container: scrollRef });
   const glowDrift = useTransform(scrollY, (v) => v * 0.04);
 
-  // 进门落客厅 + 暖光退潮入场
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const pct =
+        ((el.scrollTop + el.clientHeight / 2) / el.scrollHeight) * 100;
+      let closest = ROOMS[0];
+      let minDist = Infinity;
+      for (const room of ROOMS) {
+        const d = Math.abs(room.top + room.height / 2 - pct);
+        if (d < minDist) {
+          minDist = d;
+          closest = room;
+        }
+      }
+      if (closest.key !== focusedRef.current) {
+        focusedRef.current = closest.key;
+        setFocusedRoom(closest.key);
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const heRoom = ROOMS.find((r) => r.key === state.hePresentRoom);
+  const statusText = heRoom
+    ? state.fireplaceLit && state.hePresentRoom === "living-room"
+      ? `他在${heRoom.label}烤火`
+      : `他在${heRoom.label}`
+    : null;
+
   useEffect(() => {
     let entered = false;
     try {
@@ -166,6 +198,27 @@ export function FloorPlan() {
             )}
           </motion.div>
 
+          {/* 手写层标注——滚到哪层浮出哪层的名字 */}
+          {ROOMS.map((room) => (
+            <div
+              key={`label-${room.key}`}
+              className="pointer-events-none absolute transition-all duration-700 ease-out"
+              style={{
+                top: `${room.top + room.height * 0.48}%`,
+                left: "6%",
+                fontFamily: "var(--font-handwrite)",
+                fontWeight: 300,
+                fontSize: "clamp(0.6rem, 2.2vw, 0.78rem)",
+                color: "rgba(107, 100, 144, 0.55)",
+                letterSpacing: "1.5px",
+                transform: "rotate(-1.5deg)",
+                opacity: focusedRoom === room.key ? 0.85 : 0,
+              }}
+            >
+              {room.label}
+            </div>
+          ))}
+
           {/* 五层热区 */}
           {ROOMS.map((room) => (
             <button
@@ -192,6 +245,21 @@ export function FloorPlan() {
             </button>
           ))}
         </div>
+
+        {statusText && (
+          <div
+            className="pointer-events-none py-5 text-center"
+            style={{
+              fontFamily: "var(--font-handwrite)",
+              fontWeight: 300,
+              fontSize: "clamp(0.65rem, 2.2vw, 0.8rem)",
+              color: "rgba(107, 100, 144, 0.4)",
+              letterSpacing: "2px",
+            }}
+          >
+            {statusText}
+          </div>
+        )}
       </motion.div>
 
       {/* 还在装修气泡（视口居中，自动消失） */}

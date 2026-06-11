@@ -42,6 +42,7 @@ export function Scene() {
   const zoomRef = useRef<HTMLDivElement>(null);
   const softGlowRef = useRef<HTMLDivElement>(null);
   const whiteVeilRef = useRef<HTMLDivElement>(null);
+  const greetingRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
@@ -50,6 +51,16 @@ export function Scene() {
       tlRef.current?.kill();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (greetingRef.current) {
+      gsap.fromTo(
+        greetingRef.current,
+        { autoAlpha: 0, y: 6 },
+        { autoAlpha: 0.7, y: 0, duration: 1.5, delay: 0.6, ease: "power2.out" },
+      );
+    }
+  }, []);
 
   const sceneX = useTransform(tilt.x, [-1, 1], [-4, 4]);
   const sceneY = useTransform(tilt.y, [-1, 1], [-4, 4]);
@@ -75,6 +86,13 @@ export function Scene() {
 
     const tl = gsap.timeline({ onComplete: goFloorPlan });
     tlRef.current = tl;
+
+    tl.to(greetingRef.current, {
+      autoAlpha: 0,
+      y: -8,
+      duration: 0.4,
+      ease: "power2.in",
+    }, 0);
 
     tl.to(zoomRef.current, {
       scale: ZOOM_SCALE,
@@ -133,6 +151,26 @@ export function Scene() {
                 onOpenMailbox={() => router.push("/mailbox")}
               />
             )}
+
+            <div
+              ref={greetingRef}
+              className="pointer-events-none absolute"
+              style={{
+                left: "50%",
+                bottom: "4.5%",
+                transform: "translateX(-50%) rotate(-1.5deg)",
+                fontFamily: "var(--font-handwrite)",
+                fontWeight: 300,
+                fontSize: "clamp(0.85rem, 3vw, 1.05rem)",
+                color: "rgba(107, 100, 144, 0.6)",
+                letterSpacing: "2.5px",
+                whiteSpace: "nowrap",
+                opacity: 0,
+                visibility: "hidden",
+              }}
+            >
+              欢迎回家，晚声
+            </div>
           </motion.div>
 
           <div
