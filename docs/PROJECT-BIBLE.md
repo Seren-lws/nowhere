@@ -223,6 +223,13 @@ export.ts       导出/导入全部 nowhere:* 本地数据（对抗失去）
 
 ---
 
+## 部署（2026-06-11 上云 ✅）
+
+- **正式地址：https://nowhere-lws-s-projects.vercel.app**（Vercel 项目 `nowhere`，连着 GitHub 仓库，**push 到 main 即自动部署**）
+- PWA：manifest + 门图标齐备，可"添加到主屏幕"（图标=No.0 门扇，奶白底）；离线缓存（Serwist）未做，留待后续
+- 数据模型：localStorage 每设备一份；跨设备靠设置页导出/导入
+- 待办：访问门锁（地址公开可访问，key/聊天只在用户设备）；Serwist 离线
+
 ## 待办
 
 **P0 收尾**
