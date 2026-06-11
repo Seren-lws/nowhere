@@ -86,7 +86,7 @@ export function Vault() {
       <div
         className="fixed inset-0 w-full h-full z-0"
         style={{
-          backgroundImage: "url('/rooms/vault.jpg')",
+          backgroundImage: "url('/rooms/vault-inner.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
