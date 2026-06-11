@@ -110,33 +110,126 @@ function PlayroomEffects() {
 }
 
 function BedroomEffects() {
+  const fireflies = useMemo(
+    () =>
+      Array.from({ length: 8 }, (_, i) => ({
+        id: i,
+        size: 3 + ((i * 3) % 4),
+        left: 15 + ((i * 11) % 70),
+        top: 20 + ((i * 13) % 60),
+        duration: 8 + ((i * 3) % 6),
+        delay: (i * 2) % 7,
+      })),
+    [],
+  );
+
   return (
     <>
+      {/* Soft moonlight from window area */}
       <div
-        className="absolute inset-0 pointer-events-none z-[5]"
+        className="absolute pointer-events-none z-[5]"
         style={{
-          background: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.3) 0%, transparent 60%)",
-          animation: "moon-breathe 10s ease-in-out infinite",
+          top: "5%",
+          right: "0%",
+          width: "55%",
+          height: "50%",
+          background:
+            "radial-gradient(ellipse at 80% 30%, rgba(200,210,240,0.25) 0%, rgba(200,210,240,0.08) 40%, transparent 70%)",
+          animation: "moon-breathe 12s ease-in-out infinite",
         }}
       />
-      <div className="light-spot" style={{ width: 300, height: 300, top: "20%", left: "10%", animation: "spot-fade 8s ease-in-out infinite" }} />
-      <div className="light-spot" style={{ width: 250, height: 250, top: "50%", left: "60%", animation: "spot-fade 12s ease-in-out infinite 3s" }} />
-      <div className="light-spot" style={{ width: 400, height: 400, top: "10%", left: "40%", animation: "spot-fade 10s ease-in-out infinite 5s" }} />
-      <div className="meteor" style={{ top: "20%", animation: "meteor-trail 12s linear 2s infinite" }} />
-      <div className="meteor" style={{ top: "15%", animation: "meteor-trail 12s linear 8s infinite" }} />
+      {/* Fireflies */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        {fireflies.map((f) => (
+          <div
+            key={f.id}
+            className="absolute rounded-full"
+            style={{
+              width: f.size,
+              height: f.size,
+              left: `${f.left}%`,
+              top: `${f.top}%`,
+              background: "radial-gradient(circle, rgba(255,230,170,0.9) 0%, rgba(255,230,170,0) 70%)",
+              filter: "blur(1px)",
+              animation: `firefly-drift ${f.duration}s ease-in-out ${f.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
     </>
   );
 }
 
 function LivingRoomEffects() {
+  const embers = useMemo(
+    () =>
+      Array.from({ length: 6 }, (_, i) => ({
+        id: i,
+        left: 62 + ((i * 5) % 16),
+        size: 2 + ((i * 2) % 3),
+        duration: 4 + ((i * 3) % 5),
+        delay: (i * 2) % 6,
+      })),
+    [],
+  );
+
   return (
-    <div
-      className="absolute inset-0 pointer-events-none z-[5]"
-      style={{
-        background: "radial-gradient(circle at 70% 65%, rgba(255,100,0,0.4) 0%, transparent 40%)",
-        animation: "fire-glow-pulse 2s infinite",
-      }}
-    />
+    <>
+      {/* Multi-layer fire glow */}
+      <div
+        className="absolute pointer-events-none z-[5]"
+        style={{
+          bottom: "25%",
+          right: "15%",
+          width: "30%",
+          height: "25%",
+          background:
+            "radial-gradient(ellipse at 50% 70%, rgba(255,140,50,0.35) 0%, transparent 65%)",
+          animation: "fire-flicker-a 2s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute pointer-events-none z-[5]"
+        style={{
+          bottom: "28%",
+          right: "18%",
+          width: "24%",
+          height: "20%",
+          background:
+            "radial-gradient(ellipse at 50% 80%, rgba(255,100,30,0.3) 0%, transparent 60%)",
+          animation: "fire-flicker-b 1.5s ease-in-out 0.3s infinite",
+        }}
+      />
+      <div
+        className="absolute pointer-events-none z-[5]"
+        style={{
+          bottom: "30%",
+          right: "20%",
+          width: "18%",
+          height: "15%",
+          background:
+            "radial-gradient(ellipse at 50% 90%, rgba(255,200,80,0.25) 0%, transparent 55%)",
+          animation: "fire-flicker-a 1.8s ease-in-out 0.7s infinite",
+        }}
+      />
+      {/* Rising embers */}
+      <div className="absolute inset-0 pointer-events-none z-[6]">
+        {embers.map((e) => (
+          <div
+            key={e.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${e.left}%`,
+              bottom: "30%",
+              width: e.size,
+              height: e.size,
+              background: "radial-gradient(circle, rgba(255,180,60,0.9) 0%, rgba(255,120,30,0) 70%)",
+              animation: `ember-rise ${e.duration}s ease-out ${e.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -270,7 +363,7 @@ export function FloorPlan() {
               <div
                 className="absolute liquid-glass z-20"
                 style={{
-                  bottom: "15vh",
+                  bottom: "22vh",
                   right: "10vw",
                   padding: "0.75rem 2rem",
                   borderRadius: 9999,
