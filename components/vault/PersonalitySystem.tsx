@@ -77,6 +77,10 @@ export function PersonalitySystem() {
   const router = useRouter();
   const [layers, setLayers] = useState<PersonalityLayer[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editDrafts, setEditDrafts] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState<Record<string, boolean>>({});
   const [pending, setPending] = useState<ChangeRequest[]>([]);
   const [modalReq, setModalReq] = useState<ChangeRequest | null>(null);
   const [surfaceUpdatedAt, setSurfaceUpdatedAt] = useState("");
@@ -119,7 +123,48 @@ export function PersonalitySystem() {
   };
 
   const toggle = (layer: string) => {
+    if (editing) return;
     setExpanded(expanded === layer ? null : layer);
+  };
+
+  const startEdit = (layerKey: string, items: PersonalityLayer[]) => {
+    const drafts: Record<string, string> = {};
+    items.forEach((item) => {
+      drafts[item.id] = item.content;
+    });
+    setEditDrafts(drafts);
+    setEditing(layerKey);
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setEditDrafts({});
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    for (const [id, content] of Object.entries(editDrafts)) {
+      const original = layers.find((l) => l.id === id);
+      if (original && original.content !== content) {
+        await supabase
+          .from("personality_layers")
+          .update({ content, updated_at: new Date().toISOString() })
+          .eq("id", id);
+      }
+    }
+    const { data } = await supabase
+      .from("personality_layers")
+      .select("*")
+      .order("layer")
+      .order("field_key");
+    if (data) setLayers(data);
+    setEditing(null);
+    setEditDrafts({});
+    setSaving(false);
+  };
+
+  const toggleContentExpand = (layerKey: string) => {
+    setContentExpanded((prev) => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
   const handleApprove = async (req: ChangeRequest) => {
@@ -409,30 +454,122 @@ export function PersonalitySystem() {
                         className="flex flex-col gap-4 mt-1 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        <div className="flex items-center justify-between">
+                          <div
+                            className="h-px flex-1"
+                            style={{
+                              background: `linear-gradient(to right, transparent, ${meta.dividerColor}, transparent)`,
+                            }}
+                          />
+                          {editing !== layerKey && (
+                            <button
+                              className="ml-3 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] transition-all active:scale-95"
+                              style={{
+                                fontFamily: "var(--font-serif-sc)",
+                                color: meta.colorVar,
+                                background: "rgba(253,248,248,0.6)",
+                                border: "1px solid rgba(255,255,255,0.4)",
+                              }}
+                              onClick={() => startEdit(layerKey, items)}
+                            >
+                              <span className="material-symbols-outlined text-[14px]">
+                                edit
+                              </span>
+                              编辑
+                            </button>
+                          )}
+                        </div>
                         <div
-                          className="h-px w-full"
-                          style={{
-                            background: `linear-gradient(to right, transparent, ${meta.dividerColor}, transparent)`,
-                          }}
-                        />
-                        <div className="max-h-60 overflow-y-auto pr-2 space-y-4">
+                          className={`overflow-y-auto pr-2 space-y-4 transition-all duration-300 ${
+                            contentExpanded[layerKey] ? "" : "max-h-60"
+                          }`}
+                        >
                           {items.map((item) => (
                             <div key={item.id}>
                               {item.field_key !== "first_greeting" && (
-                                <p
-                                  className="text-[16px] leading-relaxed whitespace-pre-wrap"
-                                  style={{
-                                    fontFamily: "var(--font-serif-sc)",
-                                    color: "var(--text-deep)",
-                                  }}
-                                >
-                                  {item.content}
-                                </p>
+                                editing === layerKey ? (
+                                  <textarea
+                                    className="w-full text-[14px] leading-relaxed rounded-xl p-3 resize-none focus:outline-none focus:ring-1"
+                                    style={{
+                                      fontFamily: "var(--font-serif-sc)",
+                                      color: "var(--text-deep)",
+                                      background: "rgba(253,248,248,0.6)",
+                                      border: "1px solid rgba(255,255,255,0.5)",
+                                      boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.03)",
+                                      minHeight: "120px",
+                                    }}
+                                    value={editDrafts[item.id] ?? item.content}
+                                    onChange={(e) =>
+                                      setEditDrafts((d) => ({
+                                        ...d,
+                                        [item.id]: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                ) : (
+                                  <p
+                                    className="text-[14px] leading-relaxed whitespace-pre-wrap"
+                                    style={{
+                                      fontFamily: "var(--font-serif-sc)",
+                                      color: "var(--text-deep)",
+                                    }}
+                                  >
+                                    {item.content}
+                                  </p>
+                                )
                               )}
                             </div>
                           ))}
                         </div>
-                        {layerKey === "surface" && surfaceUpdatedAt && (
+                        {/* Expand / collapse content */}
+                        {editing !== layerKey && (
+                          <button
+                            className="self-center flex items-center gap-1 text-[12px] py-1 transition-colors"
+                            style={{
+                              fontFamily: "var(--font-serif-sc)",
+                              color: "var(--text-mid)",
+                            }}
+                            onClick={() => toggleContentExpand(layerKey)}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {contentExpanded[layerKey] ? "expand_less" : "expand_more"}
+                            </span>
+                            {contentExpanded[layerKey] ? "收起" : "展开全部"}
+                          </button>
+                        )}
+                        {/* Edit actions */}
+                        {editing === layerKey && (
+                          <div className="flex gap-3 mt-1">
+                            <button
+                              className="flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-all active:scale-[0.98]"
+                              style={{
+                                fontFamily: "var(--font-serif-sc)",
+                                color: "var(--text-mid)",
+                                background: "#fdf8f8",
+                                boxShadow:
+                                  "-3px -3px 8px rgba(255,255,255,0.8), 3px 3px 8px rgba(123,84,85,0.05)",
+                              }}
+                              onClick={cancelEdit}
+                              disabled={saving}
+                            >
+                              取消
+                            </button>
+                            <button
+                              className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white transition-all active:scale-[0.98]"
+                              style={{
+                                fontFamily: "var(--font-serif-sc)",
+                                background: "var(--primary)",
+                                boxShadow: "0 4px 14px rgba(123,84,85,0.3)",
+                                opacity: saving ? 0.6 : 1,
+                              }}
+                              onClick={saveEdit}
+                              disabled={saving}
+                            >
+                              {saving ? "保存中…" : "保存"}
+                            </button>
+                          </div>
+                        )}
+                        {layerKey === "surface" && surfaceUpdatedAt && editing !== layerKey && (
                           <div
                             className="flex items-center justify-between mt-2 pt-4"
                             style={{
