@@ -1,32 +1,29 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "motion/react";
 
 const TABS = [
-  { key: "memories", label: "记忆", icon: "inventory_2", href: "/vault/memories" },
-  { key: "pulse", label: "园丁", icon: "psychiatry", href: "/vault/pulse" },
-  { key: "profile", label: "档案", icon: "person", href: "/vault/profile" },
-  { key: "gallery", label: "画廊", icon: "photo_library", href: "/vault/gallery" },
+  { key: "memories", label: "Memories", icon: "auto_awesome", href: "/vault/memories" },
+  { key: "pulse", label: "Pulse", icon: "bubble_chart", href: "/vault/pulse" },
+  { key: "profile", label: "Profile", icon: "person", href: "/vault/profile" },
+  { key: "gallery", label: "Gallery", icon: "photo_library", href: "/vault/gallery" },
 ] as const;
 
 export function MemoryTabs() {
   const pathname = usePathname();
   const router = useRouter();
-
   const activeKey =
     TABS.find((t) => pathname.startsWith(t.href))?.key ?? "memories";
 
   return (
     <nav
-      className="flex gap-1 p-1 rounded-2xl mx-5"
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-around"
       style={{
-        background: "rgba(253,248,248,0.4)",
+        padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 16px))",
+        background: "rgba(253,248,248,0.85)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.3)",
-        boxShadow:
-          "inset 2px 2px 4px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.03)",
+        borderTop: "1px solid rgba(255,255,255,0.3)",
       }}
     >
       {TABS.map((tab) => {
@@ -35,40 +32,24 @@ export function MemoryTabs() {
           <button
             key={tab.key}
             onClick={() => router.push(tab.href)}
-            className="relative flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl transition-colors"
+            className="flex flex-col items-center gap-1 rounded-2xl transition-all duration-300"
+            style={{
+              padding: "8px 16px",
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "11px",
+              color: active ? "var(--primary)" : "var(--text-faint)",
+              background: active ? "rgba(255,255,255,0.4)" : "transparent",
+            }}
           >
-            {active && (
-              <motion.div
-                layoutId="memory-tab-bg"
-                className="absolute inset-0 rounded-xl"
-                style={{
-                  background: "#fdf8f8",
-                  boxShadow:
-                    "4px 4px 10px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.8)",
-                }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              />
-            )}
             <span
-              className="material-symbols-outlined text-[20px] relative z-10"
+              className="material-symbols-outlined text-[22px]"
               style={{
-                color: active ? "var(--primary)" : "var(--text-mid)",
                 fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
-                transition: "color 0.2s",
               }}
             >
               {tab.icon}
             </span>
-            <span
-              className="text-[11px] font-medium relative z-10"
-              style={{
-                fontFamily: "var(--font-serif-sc)",
-                color: active ? "var(--text-deep)" : "var(--text-mid)",
-                transition: "color 0.2s",
-              }}
-            >
-              {tab.label}
-            </span>
+            <span>{tab.label}</span>
           </button>
         );
       })}

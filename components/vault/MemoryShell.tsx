@@ -8,39 +8,52 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed inset-0 text-[var(--text-deep)]">
-      {/* Ambient gradient background */}
+      {/* Background gradient */}
       <div
         className="fixed inset-0 -z-10"
         style={{
           background:
-            "linear-gradient(-45deg, #f8f4fb, #fdf8f8, #f5f0f5, #f8f4fb)",
-          backgroundSize: "400% 400%",
-          animation: "gradient-x 15s ease infinite",
+            "linear-gradient(135deg, #fdf8f8 0%, #f1dede 50%, #e3cffd 100%)",
+        }}
+      />
+
+      {/* Floating bubbles */}
+      <div
+        className="fixed w-[200px] h-[200px] rounded-full -z-10 pointer-events-none"
+        style={{
+          top: "15%",
+          left: "10%",
+          background:
+            "radial-gradient(circle, rgba(255,183,197,0.2) 0%, transparent 70%)",
+          animation: "float-bubble 12s ease-in-out infinite",
         }}
       />
       <div
-        className="fixed w-96 h-96 top-20 -left-[10%] rounded-full -z-10 pointer-events-none mix-blend-multiply"
+        className="fixed w-[150px] h-[150px] rounded-full -z-10 pointer-events-none"
         style={{
-          background: "rgba(178,155,220,0.3)",
-          filter: "blur(60px)",
-          opacity: 0.4,
-          animation: "thinking-pulse 8s infinite alternate",
+          top: "60%",
+          right: "5%",
+          background:
+            "radial-gradient(circle, rgba(227,207,253,0.25) 0%, transparent 70%)",
+          animation: "float-bubble 10s ease-in-out infinite",
+          animationDelay: "3s",
         }}
       />
       <div
-        className="fixed w-[500px] h-[500px] bottom-0 -right-[10%] rounded-full -z-10 pointer-events-none mix-blend-multiply"
+        className="fixed w-[120px] h-[120px] rounded-full -z-10 pointer-events-none"
         style={{
-          background: "rgba(212,165,165,0.3)",
-          filter: "blur(60px)",
-          opacity: 0.4,
-          animation: "thinking-pulse 8s infinite alternate",
-          animationDelay: "2s",
+          bottom: "25%",
+          left: "60%",
+          background:
+            "radial-gradient(circle, rgba(241,222,222,0.3) 0%, transparent 70%)",
+          animation: "float-bubble 14s ease-in-out infinite",
+          animationDelay: "6s",
         }}
       />
 
       {/* Header */}
       <nav
-        className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-16"
+        className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-14"
         style={{
           background: "rgba(253,248,248,0.8)",
           backdropFilter: "blur(24px)",
@@ -69,24 +82,23 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
         >
           Nowhere
         </h1>
-        <div className="w-10" />
+        <button className="p-2 rounded-full hover:bg-[rgba(230,225,225,0.5)] transition-colors">
+          <span
+            className="material-symbols-outlined"
+            style={{ color: "var(--text-mid)" }}
+          >
+            more_vert
+          </span>
+        </button>
       </nav>
 
-      {/* Tabs */}
-      <div className="fixed top-16 left-0 w-full z-40 pt-3 pb-2"
-        style={{
-          background: "rgba(253,248,248,0.6)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-        }}
-      >
-        <MemoryTabs />
-      </div>
-
       {/* Content */}
-      <main className="h-full overflow-y-auto pt-36 pb-16 px-5 max-w-[800px] mx-auto">
+      <main className="h-full overflow-y-auto pt-20 pb-28 px-5 max-w-[800px] mx-auto">
         {children}
       </main>
+
+      {/* Bottom nav */}
+      <MemoryTabs />
     </div>
   );
 }

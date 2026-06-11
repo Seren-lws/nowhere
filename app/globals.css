@@ -253,6 +253,11 @@
   50%      { opacity: 0.3; transform: scale(1.2); }
 }
 
+@keyframes float-bubble {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(5deg); }
+}
+
 @keyframes bubble-rise {
   0%   { transform: translateY(100vh) translateX(0) scale(0.5); opacity: 0; }
   20%  { opacity: 0.4; }
