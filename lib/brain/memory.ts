@@ -52,7 +52,7 @@ export function clearHistory(): void {
 }
 
 export async function saveMessageToDb(
-  role: ChatRole,
+  role: "user" | "assistant" | "inner",
   content: string,
 ): Promise<string> {
   return saveChatMessage(role, content);
@@ -74,7 +74,7 @@ export async function migrateLocalToDb(): Promise<number> {
 
   let migrated = 0;
   for (const m of local) {
-    if (m.dbId) continue;
+    if (m.dbId || m.role === "memory") continue;
     try {
       await saveChatMessage(m.role, m.content);
       migrated++;
