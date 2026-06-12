@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveMemoryItem } from "@/lib/brain/db";
+import { supabase } from "@/lib/supabase";
 
 interface SavedMemory {
   content: string;
@@ -117,8 +118,9 @@ export async function POST(req: Request) {
       } as unknown as { role: string; content: string });
 
       for (const tc of msg.tool_calls) {
+        let result = '{"ok":true}';
+
         if (tc.function.name === "save_memory") {
-          let result = '{"ok":true}';
           try {
             const args = JSON.parse(tc.function.arguments);
             await saveMemoryItem({
@@ -141,12 +143,36 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
-          currentMessages.push({
-            role: "tool",
-            content: result,
-            tool_call_id: tc.id,
-          } as unknown as { role: string; content: string });
+        } else if (tc.function.name === "request_personality_change") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const { data: current } = await supabase
+              .from("personality_layers")
+              .select("content")
+              .eq("layer", args.layer)
+              .eq("field_key", args.field_key)
+              .single();
+
+            await supabase.from("personality_change_requests").insert({
+              layer: args.layer,
+              field_key: args.field_key,
+              old_content: current?.content ?? "",
+              new_content: args.new_content,
+              reason: args.reason,
+            });
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         }
+
+        currentMessages.push({
+          role: "tool",
+          content: result,
+          tool_call_id: tc.id,
+        } as unknown as { role: string; content: string });
       }
       continue;
     }

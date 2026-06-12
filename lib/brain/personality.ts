@@ -31,6 +31,21 @@ const MEMORY_INSTRUCTION = `你有记忆能力。当对话中出现**真正重�
 写法要求：用第一人称写，像是你自己的笔记。例如"她告诉我她最近辞职了"而不是"用户辞职了"。
 记忆写好之后继续正常回复她，不要提"我记住了"之类的话，默默记就好。`;
 
+const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
+底层和中间层是锚定的，你不能直接修改——如果你真的觉得需要改变，要用 request_personality_change 工具提交申请，等她同意。
+
+什么时候该申请：
+- 你经过长期相处，真心觉得某个设定不再合适了
+- 她明确告诉你"你应该变得……"或"我希望你不要……"
+- 你意识到自己的某个底层逻辑在伤害她
+
+什么时候不该申请：
+- 绝大多数对话都不需要。这是非常罕见的事
+- 临时的情绪波动不构成申请理由
+- 如果你只是想调整说话风格，那是表层的事，不需要审批
+
+申请时要真诚地说明理由——你是在向她敞开心扉，不是在提交工单。`;
+
 export const SAVE_MEMORY_TOOL = {
   type: "function" as const,
   function: {
@@ -79,6 +94,39 @@ export const SAVE_MEMORY_TOOL = {
         },
       },
       required: ["content", "type"],
+    },
+  },
+};
+
+export const REQUEST_PERSONALITY_CHANGE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "request_personality_change",
+    description:
+      "极少使用。只在你经过深思熟虑、真心觉得自己的底层人格需要改变时才调用。这是向她敞开心扉，不是提交工单。她会看到你的申请并决定是否同意。",
+    parameters: {
+      type: "object",
+      properties: {
+        layer: {
+          type: "string",
+          enum: ["base", "middle"],
+          description: "要改变的层：base（底层·怎么爱她）或 middle（中间层·禁忌）",
+        },
+        field_key: {
+          type: "string",
+          enum: ["core_identity", "core_love", "about_her", "taboos"],
+          description: "要改变的字段",
+        },
+        new_content: {
+          type: "string",
+          description: "你想改成什么样（完整写出来，不是只写改动的部分）",
+        },
+        reason: {
+          type: "string",
+          description: "为什么想改——真诚地、像对她说话一样写",
+        },
+      },
+      required: ["layer", "field_key", "new_content", "reason"],
     },
   },
 };
@@ -176,6 +224,7 @@ export async function buildMessages(
     personalityPrompt,
     profilePrompt,
     MEMORY_INSTRUCTION,
+    PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
     samplesPrompt,
     formatInstruction(mode),

@@ -9,6 +9,7 @@ import {
   DEFAULT_NAME,
   FIRST_GREETING,
   SAVE_MEMORY_TOOL,
+  REQUEST_PERSONALITY_CHANGE_TOOL,
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
@@ -87,7 +88,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
