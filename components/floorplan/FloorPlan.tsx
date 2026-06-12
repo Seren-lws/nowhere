@@ -293,13 +293,12 @@ function CompanionBubble({ status }: { status: CompanionStatus }) {
       <img
         src="/floorplan/companion.png"
         alt="他"
-        className="drop-shadow-lg"
         style={{
-          width: 64,
-          height: 64,
+          width: 110,
+          height: 110,
           objectFit: "contain",
           animation: "gentle-float 5s ease-in-out 1s infinite",
-          filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.1))",
+          filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.15))",
         }}
       />
     </div>

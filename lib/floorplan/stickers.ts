@@ -68,6 +68,6 @@ export const HE_POINT_BY_ROOM: Record<string, { left: number; top: number }> = {
   "study": { left: 35, top: 55 },
   "playroom": { left: 50, top: 50 },
   "bedroom": { left: 40, top: 55 },
-  "living-room": { left: 35, top: 50 },
+  "living-room": { left: 25, top: 68 },
   "vault": { left: 50, top: 45 },
 };
