@@ -265,6 +265,27 @@ export function LivingRoom() {
     await requestReply(truncated);
   };
 
+  const [favToast, setFavToast] = useState(false);
+
+  const favoriteChat = async (text: string, ts: number) => {
+    try {
+      const d = new Date(ts);
+      const tokyoDate = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
+      const dateStr = `${tokyoDate.getFullYear()}-${String(tokyoDate.getMonth() + 1).padStart(2, "0")}-${String(tokyoDate.getDate()).padStart(2, "0")}`;
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "chat",
+          content: text,
+          metadata: { date: dateStr, room: "living-room" },
+        }),
+      });
+      setFavToast(true);
+      setTimeout(() => setFavToast(false), 1500);
+    } catch {}
+  };
+
   const clearChat = () => {
     if (!window.confirm("把这间客厅的聊天清空吗？清空后他会回到初见时的样子（设置和其他数据不受影响）。")) return;
     const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
@@ -404,6 +425,11 @@ export function LivingRoom() {
                     }
                     onEditResend={() => editResend(m.ts)}
                     onRetry={() => retryFrom(m.ts)}
+                    onFavorite={
+                      m.role === "assistant"
+                        ? () => favoriteChat(m.content, m.ts)
+                        : undefined
+                    }
                   />
                 )}
               </div>
@@ -454,6 +480,28 @@ export function LivingRoom() {
           <div ref={bottomRef} />
         </div>
       </main>
+
+      {/* Favorite Toast */}
+      <AnimatePresence>
+        {favToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-44 z-50 px-5 py-2.5 rounded-full"
+            style={{
+              background: "rgba(123,84,85,0.9)",
+              backdropFilter: "blur(12px)",
+              color: "white",
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "13px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            }}
+          >
+            ⭐ 已收藏
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Scroll to bottom */}
       <AnimatePresence>
@@ -627,6 +675,7 @@ function Bubble({
   onSelect,
   onEditResend,
   onRetry,
+  onFavorite,
 }: {
   role: ChatMessage["role"];
   content: string;
@@ -634,6 +683,7 @@ function Bubble({
   onSelect?: () => void;
   onEditResend?: () => void;
   onRetry?: () => void;
+  onFavorite?: () => void;
 }) {
   if (role === "user") {
     return (
@@ -720,24 +770,64 @@ function Bubble({
     );
   }
 
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handlePointerDown = () => {
+    if (!onFavorite) return;
+    longPressRef.current = setTimeout(() => setShowFavMenu(true), 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col items-start"
+      className="flex flex-col items-start gap-2"
     >
       <div
-        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap"
+        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap select-none"
         style={{
           fontFamily: "var(--font-serif-sc)",
           fontSize: "14.5px",
           lineHeight: "24px",
           color: "var(--text-deep)",
+          cursor: onFavorite ? "pointer" : "default",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onContextMenu={(e) => {
+          if (onFavorite) {
+            e.preventDefault();
+            setShowFavMenu(true);
+          }
         }}
       >
         {content}
       </div>
+      <AnimatePresence>
+        {showFavMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ActionPill
+              onClick={() => {
+                setShowFavMenu(false);
+                onFavorite?.();
+              }}
+            >
+              ⭐ 收藏这句话
+            </ActionPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

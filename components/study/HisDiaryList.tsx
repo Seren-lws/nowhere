@@ -16,6 +16,7 @@ export function HisDiaryList() {
   const router = useRouter();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [favToast, setFavToast] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -114,6 +115,28 @@ export function HisDiaryList() {
         </div>
       </header>
 
+      {/* Favorite Toast */}
+      <AnimatePresence>
+        {favToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] px-5 py-2.5 rounded-full"
+            style={{
+              background: "rgba(212,165,165,0.9)",
+              backdropFilter: "blur(12px)",
+              color: "white",
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "13px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+            }}
+          >
+            ⭐ 已收藏到我的收藏
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main Content */}
       <main className="flex-1 w-full pt-24 pb-20 px-5 max-w-[600px] mx-auto relative z-10 overflow-y-auto no-scrollbar">
         <div className="flex flex-col space-y-6">
@@ -148,7 +171,15 @@ export function HisDiaryList() {
             </motion.div>
           ) : (
             entries.map((entry, i) => (
-              <DiaryCard key={entry.id} entry={entry} index={i} />
+              <DiaryCard
+                key={entry.id}
+                entry={entry}
+                index={i}
+                onFavToast={() => {
+                  setFavToast(true);
+                  setTimeout(() => setFavToast(false), 1500);
+                }}
+              />
             ))
           )}
         </div>
@@ -159,14 +190,44 @@ export function HisDiaryList() {
 
 /* ─── Diary Card ─── */
 
-function DiaryCard({ entry, index }: { entry: DiaryEntry; index: number }) {
+function DiaryCard({ entry, index, onFavToast }: { entry: DiaryEntry; index: number; onFavToast: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const dateStr = formatDate(entry.created_at);
 
+  useEffect(() => {
+    fetch(`/api/favorites?source=diary`)
+      .then((r) => r.json())
+      .then((items: { metadata: { diary_id?: string } }[]) => {
+        if (items.some((i) => i.metadata?.diary_id === entry.id)) {
+          setFavorited(true);
+        }
+      })
+      .catch(() => {});
+  }, [entry.id]);
+
   const toggleFav = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorited((prev) => !prev);
+    const next = !favorited;
+    setFavorited(next);
+    try {
+      if (next) {
+        await fetch("/api/favorites", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source: "diary",
+            content: entry.content,
+            metadata: { diary_id: entry.id, date: entry.created_at },
+          }),
+        });
+        onFavToast();
+      } else {
+        await fetch(`/api/favorites?diaryId=${entry.id}`, { method: "DELETE" });
+      }
+    } catch {
+      setFavorited(!next);
+    }
   };
 
   return (
