@@ -79,7 +79,7 @@ export function LivingRoom() {
 
       if (lastDiaryTime > new Date(lastTime).getTime()) return;
 
-      await fetch("/api/diary/generate", {
+      const genRes = await fetch("/api/diary/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -89,6 +89,22 @@ export function LivingRoom() {
           since: lastTime,
         }),
       });
+
+      if (genRes.ok) {
+        const { id } = await genRes.json();
+        if (id) {
+          const notif: ChatMessage = {
+            role: "diary-notify",
+            content: id,
+            ts: Date.now(),
+          };
+          setMessages((prev) => {
+            const next = [...prev, notif];
+            saveHistory(next);
+            return next;
+          });
+        }
+      }
     } catch {}
   };
 
@@ -96,6 +112,15 @@ export function LivingRoom() {
   useEffect(() => {
     const diaryId = searchParams.get("shareDiary");
     if (!diaryId || shareHandled.current || !settings || sending) return;
+
+    const alreadyShared = messages.some(
+      (m) => m.diaryShare?.id === diaryId,
+    );
+    if (alreadyShared) {
+      router.replace("/living-room", { scroll: false });
+      return;
+    }
+
     shareHandled.current = true;
 
     (async () => {
@@ -356,27 +381,34 @@ export function LivingRoom() {
         className="h-full overflow-y-auto pt-20 pb-40 px-5 max-w-[800px] mx-auto"
       >
         <div className="flex flex-col gap-3">
-          {messages.map((m) =>
-            m.role === "memory" && m.memories ? (
-              <MemoryTag key={m.ts} memories={m.memories} />
-            ) : m.diaryShare ? (
-              <DiaryShareCard key={m.ts} diary={m.diaryShare} />
-            ) : (
-              <Bubble
-                key={m.ts}
-                role={m.role}
-                content={m.content}
-                selected={selectedTs === m.ts}
-                onSelect={
-                  m.role === "user" && !sending
-                    ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts)
-                    : undefined
-                }
-                onEditResend={() => editResend(m.ts)}
-                onRetry={() => retryFrom(m.ts)}
-              />
-            ),
-          )}
+          {messages.map((m, idx) => {
+            const showTime = shouldShowTime(messages, idx);
+            return (
+              <div key={m.ts}>
+                {showTime && <TimeStamp ts={m.ts} />}
+                {m.role === "memory" && m.memories ? (
+                  <MemoryTag memories={m.memories} />
+                ) : m.role === "diary-notify" ? (
+                  <DiaryNotifyCard diaryId={m.content} />
+                ) : m.diaryShare ? (
+                  <DiaryShareCard diary={m.diaryShare} />
+                ) : (
+                  <Bubble
+                    role={m.role}
+                    content={m.content}
+                    selected={selectedTs === m.ts}
+                    onSelect={
+                      m.role === "user" && !sending
+                        ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts)
+                        : undefined
+                    }
+                    onEditResend={() => editResend(m.ts)}
+                    onRetry={() => retryFrom(m.ts)}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {sending && (
             <motion.div
@@ -948,6 +980,106 @@ function MemoryTag({ memories }: { memories: SavedMemoryInfo[] }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ─── Time Stamp ─── */
+
+const FIVE_MINUTES = 5 * 60 * 1000;
+
+function shouldShowTime(messages: ChatMessage[], index: number): boolean {
+  if (index === 0) return true;
+  const prev = messages[index - 1];
+  const curr = messages[index];
+  return curr.ts - prev.ts > FIVE_MINUTES;
+}
+
+function formatChatTime(ts: number): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const tokyoOffset = 9 * 60;
+  const localOffset = d.getTimezoneOffset();
+  const tokyoDate = new Date(d.getTime() + (localOffset + tokyoOffset) * 60000);
+  const tokyoNow = new Date(now.getTime() + (now.getTimezoneOffset() + tokyoOffset) * 60000);
+
+  const hour = tokyoDate.getHours().toString().padStart(2, "0");
+  const min = tokyoDate.getMinutes().toString().padStart(2, "0");
+  const time = `${hour}:${min}`;
+
+  const isToday =
+    tokyoDate.getFullYear() === tokyoNow.getFullYear() &&
+    tokyoDate.getMonth() === tokyoNow.getMonth() &&
+    tokyoDate.getDate() === tokyoNow.getDate();
+
+  if (isToday) return time;
+
+  const yesterday = new Date(tokyoNow);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    tokyoDate.getFullYear() === yesterday.getFullYear() &&
+    tokyoDate.getMonth() === yesterday.getMonth() &&
+    tokyoDate.getDate() === yesterday.getDate();
+
+  if (isYesterday) return `昨天 ${time}`;
+
+  return `${tokyoDate.getMonth() + 1}/${tokyoDate.getDate()} ${time}`;
+}
+
+function TimeStamp({ ts }: { ts: number }) {
+  return (
+    <div className="flex justify-center py-2">
+      <span
+        className="text-[11px] px-3 py-1 rounded-full"
+        style={{
+          color: "var(--text-faint)",
+          background: "rgba(236,231,231,0.5)",
+          fontFamily: "var(--font-serif-sc)",
+        }}
+      >
+        {formatChatTime(ts)}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Diary Notify Card ─── */
+
+function DiaryNotifyCard({ diaryId }: { diaryId: string }) {
+  const router = useRouter();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-center"
+    >
+      <button
+        onClick={() => router.push(`/study/his-drawer/diary`)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95"
+        style={{
+          background: "rgba(212,165,165,0.12)",
+          border: "1px solid rgba(212,165,165,0.2)",
+          fontFamily: "var(--font-serif-sc)",
+          fontSize: "13px",
+          color: "var(--primary)",
+        }}
+      >
+        <span
+          className="material-symbols-outlined text-[16px]"
+          style={{ fontVariationSettings: "'FILL' 1" }}
+        >
+          auto_stories
+        </span>
+        他写了一篇日记
+        <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>
+          点击查看
+        </span>
+        <span className="material-symbols-outlined text-[14px]">
+          arrow_forward
+        </span>
+      </button>
     </motion.div>
   );
 }

@@ -188,7 +188,7 @@ function DiaryCard({ entry, index }: { entry: DiaryEntry; index: number }) {
     >
       {/* Date + Favorite */}
       <div className="flex justify-between items-center mb-4">
-        <time className="font-medium text-lg" style={{ color: "rgba(212,194,194,0.9)" }}>
+        <time className="font-medium text-sm" style={{ color: "rgba(212,194,194,0.9)" }}>
           {dateStr}
         </time>
         <button
@@ -210,7 +210,7 @@ function DiaryCard({ entry, index }: { entry: DiaryEntry; index: number }) {
       {/* Content */}
       <div className="space-y-4">
         <p
-          className="text-xl leading-relaxed"
+          className="text-base leading-relaxed"
           style={{
             color: "rgba(236,231,231,0.9)",
             ...(!expanded

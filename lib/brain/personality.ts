@@ -61,7 +61,7 @@ export const SAVE_MEMORY_TOOL = {
       properties: {
         content: {
           type: "string",
-          description: "记忆摘要，用简洁的第三人称写",
+          description: "记忆摘要，用第一人称写，像你自己的笔记。例如「她告诉我她最近辞职了」而不是「用户辞职了」",
         },
         type: {
           type: "string",
@@ -244,9 +244,22 @@ export async function buildMessages(
   const memoryPrompt = memoriesToPrompt(nonProfileAnchors, dedupedRelevant, recent);
   const samplesPrompt = samplesToPrompt(samples);
 
+  const now = new Date();
+  const tokyoTime = now.toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const timeContext = `【当前时间】${tokyoTime}（东京时间）`;
+
   const systemParts = [
     personalityPrompt,
     profilePrompt,
+    timeContext,
     MEMORY_INSTRUCTION,
     DIARY_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
