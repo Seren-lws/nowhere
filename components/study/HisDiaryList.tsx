@@ -18,6 +18,13 @@ export function HisDiaryList() {
   const [loading, setLoading] = useState(true);
   const [favToast, setFavToast] = useState(false);
 
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/diary?id=${id}`, { method: "DELETE" });
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch {}
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -179,6 +186,7 @@ export function HisDiaryList() {
                   setFavToast(true);
                   setTimeout(() => setFavToast(false), 1500);
                 }}
+                onDelete={handleDelete}
               />
             ))
           )}
@@ -190,7 +198,7 @@ export function HisDiaryList() {
 
 /* ─── Diary Card ─── */
 
-function DiaryCard({ entry, index, onFavToast }: { entry: DiaryEntry; index: number; onFavToast: () => void }) {
+function DiaryCard({ entry, index, onFavToast, onDelete }: { entry: DiaryEntry; index: number; onFavToast: () => void; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const dateStr = formatDate(entry.created_at);
@@ -248,25 +256,41 @@ function DiaryCard({ entry, index, onFavToast }: { entry: DiaryEntry; index: num
         transition: "all 0.3s ease",
       }}
     >
-      {/* Date + Favorite */}
+      {/* Date + Actions */}
       <div className="flex justify-between items-center mb-4">
         <time className="font-medium text-sm" style={{ color: "rgba(212,194,194,0.9)" }}>
           {dateStr}
         </time>
-        <button
-          className="active:scale-90 transition-transform"
-          onClick={toggleFav}
-        >
-          <span
-            className="material-symbols-outlined text-xl"
-            style={{
-              color: favorited ? "rgba(212,165,165,0.8)" : "rgba(212,165,165,0.4)",
-              fontVariationSettings: favorited ? "'FILL' 1" : "'FILL' 0",
+        <div className="flex items-center gap-2">
+          <button
+            className="active:scale-90 transition-transform"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm("确定删除这篇日记吗？")) onDelete(entry.id);
             }}
           >
-            favorite
-          </span>
-        </button>
+            <span
+              className="material-symbols-outlined text-lg"
+              style={{ color: "rgba(212,165,165,0.3)" }}
+            >
+              delete_outline
+            </span>
+          </button>
+          <button
+            className="active:scale-90 transition-transform"
+            onClick={toggleFav}
+          >
+            <span
+              className="material-symbols-outlined text-xl"
+              style={{
+                color: favorited ? "rgba(212,165,165,0.8)" : "rgba(212,165,165,0.4)",
+                fontVariationSettings: favorited ? "'FILL' 1" : "'FILL' 0",
+              }}
+            >
+              favorite
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Content */}

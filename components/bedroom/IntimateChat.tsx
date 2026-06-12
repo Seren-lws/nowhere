@@ -43,6 +43,7 @@ export function IntimateChat() {
   const [selectedTs, setSelectedTs] = useState<number | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [favToast, setFavToast] = useState(false);
+  const [diaryToast, setDiaryToast] = useState(false);
 
   // Modals
   const [showPresets, setShowPresets] = useState(false);
@@ -293,26 +294,16 @@ export function IntimateChat() {
     setShowEndDialog(false);
 
     if (action === "diary" && ready) {
-      // Ask AI to write a diary about this session
       try {
         const ctx = toContext(messages).slice(-30);
-        const prompt = `请根据下面这段卧室里的亲密对话，写一篇私密日记（100-300字）。用第一人称写，像在自己日记本上写的那样——真实、温柔、私密。\n\n${ctx.map((m) => `${m.role === "user" ? "她" : "我"}：${m.content}`).join("\n")}`;
-        const resp = await sendChat(
+        const prompt = `请根据下面这段卧室里的亲密对话，写一篇私密日记（100-300字）。用第一人称写，像在自己日记本上写的那样——真实、温柔、私密。用 write_diary 工具写入。\n\n${ctx.map((m) => `${m.role === "user" ? "她" : "我"}：${m.content}`).join("\n")}`;
+        await sendChat(
           [{ role: "user", content: prompt }],
           { ...settings, chatModel: settings.chatModel },
           [WRITE_DIARY_TOOL],
         );
-        if (resp.content) {
-          // Diary was written via tool call, or we can manually create one
-          await fetch("/api/diary", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              author: "companion",
-              content: resp.content.replace(/^心声[:：][\s\S]*?---\s*/, "").trim(),
-            }),
-          });
-        }
+        setDiaryToast(true);
+        setTimeout(() => setDiaryToast(false), 2000);
       } catch {}
     } else if (action === "memory" && ready) {
       // Ask AI to summarize and save memory
@@ -605,6 +596,19 @@ export function IntimateChat() {
             style={{ background: "rgba(230,190,210,0.3)", backdropFilter: "blur(12px)", color: "white", fontFamily: "var(--font-serif-sc)", fontSize: "13px" }}
           >
             ⭐ 已收藏
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {diaryToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-40 z-50 px-5 py-2.5 rounded-full"
+            style={{ background: "rgba(180,170,220,0.3)", backdropFilter: "blur(12px)", color: "white", fontFamily: "var(--font-serif-sc)", fontSize: "13px" }}
+          >
+            📖 日记已写好
           </motion.div>
         )}
       </AnimatePresence>
