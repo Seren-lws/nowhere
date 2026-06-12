@@ -390,7 +390,7 @@ export function IntimateChat() {
           <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => router.push("/bedroom")}>
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <span className="text-[15px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.6)" }}>亲密聊天</span>
+          <span className="text-[22px]" style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(255,255,255,0.7)" }}>Sanctuary</span>
           <div className="w-10" />
         </header>
 
@@ -523,9 +523,12 @@ export function IntimateChat() {
           </button>
         </div>
 
-        <span className="text-[14px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)" }}>
-          {activeSession?.presets?.scene || "亲密聊天"}
-        </span>
+        <div className="flex flex-col items-center">
+          <span className="text-[22px]" style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(255,255,255,0.7)" }}>Sanctuary</span>
+          {activeSession?.presets?.scene && (
+            <span className="text-[10px] mt-0.5" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.3)" }}>{activeSession.presets.scene}</span>
+          )}
+        </div>
 
         <div className="flex items-center gap-1">
           <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => setShowPresets(true)}>
@@ -789,8 +792,60 @@ function BedroomBg() {
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
       <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #181124 0%, #2a1b38 40%, #1f142b 70%, #0d0812 100%)" }} />
-      <div className="absolute rounded-full" style={{ top: "-5%", right: "5%", width: "55%", height: "55%", background: "#4f316e", filter: "blur(100px)", opacity: 0.25 }} />
-      <div className="absolute rounded-full" style={{ bottom: "-10%", left: "5%", width: "60%", height: "60%", background: "#2a1b3d", filter: "blur(100px)", opacity: 0.25 }} />
+      {/* Flowing glow orbs */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          top: "-15%", left: "-10%", width: "70%", height: "70%",
+          background: "radial-gradient(circle, #d4a5d4 0%, transparent 70%)",
+          filter: "blur(100px)", opacity: 0.3, mixBlendMode: "screen",
+          animation: "intimate-glow-1 12s ease-in-out infinite alternate",
+        }}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          top: "30%", right: "-20%", width: "65%", height: "65%",
+          background: "radial-gradient(circle, #ffb7b2 0%, transparent 70%)",
+          filter: "blur(120px)", opacity: 0.25, mixBlendMode: "screen",
+          animation: "intimate-glow-2 15s ease-in-out infinite alternate",
+        }}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          bottom: "-10%", left: "20%", width: "60%", height: "60%",
+          background: "radial-gradient(circle, #8c6b9d 0%, transparent 70%)",
+          filter: "blur(100px)", opacity: 0.3, mixBlendMode: "screen",
+          animation: "intimate-glow-3 18s ease-in-out infinite alternate",
+        }}
+      />
+      <div
+        className="absolute rounded-full"
+        style={{
+          top: "50%", left: "40%", width: "50%", height: "50%",
+          background: "radial-gradient(circle, #e6bed2 0%, transparent 65%)",
+          filter: "blur(130px)", opacity: 0.15, mixBlendMode: "screen",
+          animation: "intimate-glow-1 20s ease-in-out infinite alternate-reverse",
+        }}
+      />
+      <style jsx global>{`
+        @keyframes intimate-glow-1 {
+          0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+          50% { transform: translate(8%, -6%) scale(1.15); opacity: 0.35; }
+          100% { transform: translate(-5%, 8%) scale(1.05); opacity: 0.25; }
+        }
+        @keyframes intimate-glow-2 {
+          0% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+          50% { transform: translate(-10%, 5%) scale(1.2); opacity: 0.3; }
+          100% { transform: translate(5%, -8%) scale(0.95); opacity: 0.2; }
+        }
+        @keyframes intimate-glow-3 {
+          0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+          50% { transform: translate(6%, 6%) scale(1.25); opacity: 0.35; }
+          100% { transform: translate(-8%, -4%) scale(1.1); opacity: 0.25; }
+        }
+      `}</style>
     </div>
   );
 }
