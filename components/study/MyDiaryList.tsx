@@ -373,12 +373,15 @@ function StarField() {
           key={s.id}
           className="absolute rounded-full bg-white"
           style={{
-            width: s.size,
-            height: s.size,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
             left: `${s.left}%`,
             top: `${s.top}%`,
-            opacity: 0,
-            animation: `twinkle ${s.duration}s infinite ease-in-out`,
+            opacity: "0",
+            animationName: "twinkle",
+            animationDuration: `${s.duration}s`,
+            animationIterationCount: "infinite",
+            animationTimingFunction: "ease-in-out",
             animationDelay: `${s.delay}s`,
           }}
         />

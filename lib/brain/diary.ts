@@ -117,11 +117,11 @@ export async function getRecentChatForDiary(
 
 export const MOOD_OPTIONS = [
   { key: "happy", label: "开心", emoji: "😊" },
-  { key: "sad", label: "低落", emoji: "😢" },
-  { key: "angry", label: "烦躁", emoji: "😤" },
-  { key: "productive", label: "充实", emoji: "💪" },
+  { key: "sad", label: "低落", emoji: "😔" },
   { key: "calm", label: "平静", emoji: "🌿" },
-  { key: "anxious", label: "焦虑", emoji: "😰" },
+  { key: "inspired", label: "灵感", emoji: "✨" },
+  { key: "cloudy", label: "迷茫", emoji: "☁️" },
+  { key: "nostalgic", label: "思念", emoji: "🌙" },
 ] as const;
 
 export type MoodKey = (typeof MOOD_OPTIONS)[number]["key"];
