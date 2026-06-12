@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { isChatReady, loadSettings, type BrainSettings } from "@/lib/brain/config";
 import {
@@ -9,6 +9,7 @@ import {
   DEFAULT_NAME,
   FIRST_GREETING,
   SAVE_MEMORY_TOOL,
+  WRITE_DIARY_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
   parseReply,
   type ChatMode,
@@ -20,13 +21,16 @@ import {
   saveMessageToDb,
   toContext,
   type ChatMessage,
+  type DiaryShareData,
 } from "@/lib/brain/memory";
 import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const TWO_HOURS = 2 * 60 * 60 * 1000;
 
 export function LivingRoom() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [settings, setSettings] = useState<BrainSettings | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -42,7 +46,8 @@ export function LivingRoom() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const s = loadSettings();
+    setSettings(s);
     const h = loadHistory();
     if (h.length === 0) {
       const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
@@ -51,7 +56,82 @@ export function LivingRoom() {
     } else {
       setMessages(h);
     }
+
+    if (isChatReady(s)) {
+      triggerAutoDiary(s);
+    }
   }, []);
+
+  const triggerAutoDiary = async (s: BrainSettings) => {
+    try {
+      const res = await fetch("/api/diary?author=companion&limit=1");
+      const lastDiaries = await res.json();
+      const lastDiaryTime = lastDiaries?.[0]?.created_at
+        ? new Date(lastDiaries[0].created_at).getTime()
+        : 0;
+
+      const lastMsgRes = await fetch("/api/chat/last-time");
+      const { lastTime } = await lastMsgRes.json();
+      if (!lastTime) return;
+
+      const gap = Date.now() - new Date(lastTime).getTime();
+      if (gap < TWO_HOURS) return;
+
+      if (lastDiaryTime > new Date(lastTime).getTime()) return;
+
+      await fetch("/api/diary/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          baseUrl: s.baseUrl,
+          apiKey: s.apiKey,
+          model: s.chatModel,
+          since: lastTime,
+        }),
+      });
+    } catch {}
+  };
+
+  const shareHandled = useRef(false);
+  useEffect(() => {
+    const diaryId = searchParams.get("shareDiary");
+    if (!diaryId || shareHandled.current || !settings || sending) return;
+    shareHandled.current = true;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/diary?id=${diaryId}`);
+        if (!res.ok) return;
+        const diary = await res.json();
+        if (!diary?.content) return;
+
+        const shareData: DiaryShareData = {
+          id: diary.id,
+          content: diary.content,
+          mood: diary.mood,
+          created_at: diary.created_at,
+        };
+
+        const shareMsg: ChatMessage = {
+          role: "user",
+          content: `我把我的日记分享给你看：\n\n${diary.content}`,
+          ts: Date.now(),
+          diaryShare: shareData,
+        };
+
+        const acc = [...messages, shareMsg];
+        setMessages(acc);
+        saveHistory(acc);
+        saveMessageToDb("user", shareMsg.content).then((dbId) => {
+          shareMsg.dbId = dbId;
+          saveHistory(acc);
+        }).catch(() => {});
+
+        router.replace("/living-room", { scroll: false });
+        await requestReply(acc);
+      } catch {}
+    })();
+  }, [searchParams, settings, messages, sending]);
 
   useEffect(() => {
     if (atBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +168,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, WRITE_DIARY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -104,17 +184,19 @@ export function LivingRoom() {
 
       if (inner) {
         await delay(220);
-        acc.push({ role: "inner", content: inner, ts: t++ });
+        const innerMsg: ChatMessage = { role: "inner", content: inner, ts: t++ };
+        acc.push(innerMsg);
         setMessages([...acc]);
         saveHistory(acc);
-        saveMessageToDb("inner", inner).catch(() => {});
+        saveMessageToDb("inner", inner).then((dbId) => { innerMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
       for (const p of parts) {
         await delay(mode === "sentences" ? 620 : 280);
-        acc.push({ role: "assistant", content: p, ts: t++ });
+        const asstMsg: ChatMessage = { role: "assistant", content: p, ts: t++ };
+        acc.push(asstMsg);
         setMessages([...acc]);
         saveHistory(acc);
-        saveMessageToDb("assistant", p).catch(() => {});
+        saveMessageToDb("assistant", p).then((dbId) => { asstMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
     } catch (e) {
       setSending(false);
@@ -130,7 +212,10 @@ export function LivingRoom() {
     setMessages(acc);
     saveHistory(acc);
     setInput("");
-    saveMessageToDb("user", text).catch(() => {});
+    saveMessageToDb("user", text).then((dbId) => {
+      acc[acc.length - 1].dbId = dbId;
+      saveHistory(acc);
+    }).catch(() => {});
     await requestReply(acc);
   };
 
@@ -274,6 +359,8 @@ export function LivingRoom() {
           {messages.map((m) =>
             m.role === "memory" && m.memories ? (
               <MemoryTag key={m.ts} memories={m.memories} />
+            ) : m.diaryShare ? (
+              <DiaryShareCard key={m.ts} diary={m.diaryShare} />
             ) : (
               <Bubble
                 key={m.ts}
@@ -642,6 +729,98 @@ function ActionPill({ onClick, children }: { onClick?: () => void; children: Rea
     >
       {children}
     </button>
+  );
+}
+
+/* ─── Diary Share Card ─── */
+
+function DiaryShareCard({ diary }: { diary: DiaryShareData }) {
+  const [open, setOpen] = useState(false);
+  const date = new Date(diary.created_at);
+  const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col items-end"
+    >
+      <div
+        className="rounded-xl overflow-hidden max-w-[80%] cursor-pointer active:scale-[0.98] transition-transform"
+        style={{
+          background: "linear-gradient(135deg, rgba(237,220,255,0.4), rgba(255,218,217,0.4))",
+          border: "1px solid rgba(255,255,255,0.5)",
+          boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+        }}
+        onClick={() => setOpen(!open)}
+      >
+        <div className="px-4 py-3 flex items-center gap-2">
+          <span
+            className="material-symbols-outlined text-[18px]"
+            style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
+          >
+            auto_stories
+          </span>
+          <div className="flex-1">
+            <p
+              className="text-[13px]"
+              style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+            >
+              她分享了一篇日记给你
+            </p>
+            <p
+              className="text-[11px] mt-0.5"
+              style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-faint)" }}
+            >
+              {dateStr}的日记 · 点击{open ? "收起" : "查看"}
+            </p>
+          </div>
+          <span
+            className="material-symbols-outlined text-[16px] transition-transform"
+            style={{ color: "var(--text-faint)", transform: open ? "rotate(180deg)" : "none" }}
+          >
+            expand_more
+          </span>
+        </div>
+
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div
+                className="px-4 pb-3 pt-1"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                {diary.mood && (
+                  <span
+                    className="inline-block px-2 py-0.5 rounded-full text-[11px] mb-2"
+                    style={{
+                      background: "rgba(212,165,165,0.2)",
+                      color: "var(--primary)",
+                      fontFamily: "var(--font-serif-sc)",
+                    }}
+                  >
+                    {diary.mood}
+                  </span>
+                )}
+                <p
+                  className="text-[13px] leading-relaxed whitespace-pre-wrap"
+                  style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+                >
+                  {diary.content}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
 

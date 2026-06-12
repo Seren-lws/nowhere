@@ -4,12 +4,20 @@ import type { SavedMemoryInfo } from "./client";
 
 export type ChatRole = "user" | "assistant" | "inner" | "memory";
 
+export interface DiaryShareData {
+  id: string;
+  content: string;
+  mood?: string;
+  created_at: string;
+}
+
 export interface ChatMessage {
   role: ChatRole;
   content: string;
   ts: number;
   dbId?: string;
   memories?: SavedMemoryInfo[];
+  diaryShare?: DiaryShareData;
 }
 
 export function toContext(

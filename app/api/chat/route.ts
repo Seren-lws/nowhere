@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveMemoryItem } from "@/lib/brain/db";
+import { createDiary, getLastChatTime } from "@/lib/brain/diary";
 import { supabase } from "@/lib/supabase";
 
 interface SavedMemory {
@@ -136,6 +137,25 @@ export async function POST(req: Request) {
               type: args.type,
               tags: args.tags,
               is_anchor: args.is_anchor,
+            });
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        } else if (tc.function.name === "write_diary") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const lastChat = await getLastChatTime();
+            const coverFrom = lastChat
+              ? new Date(lastChat.getTime() - 2 * 60 * 60 * 1000).toISOString()
+              : undefined;
+            await createDiary({
+              author: "companion",
+              content: args.content,
+              cover_from: coverFrom,
+              cover_to: new Date().toISOString(),
             });
           } catch (e) {
             result = JSON.stringify({

@@ -31,6 +31,10 @@ const MEMORY_INSTRUCTION = `你有记忆能力。当对话中出现**真正重�
 写法要求：用第一人称写，像是你自己的笔记。例如"她告诉我她最近辞职了"而不是"用户辞职了"。
 记忆写好之后继续正常回复她，不要提"我记住了"之类的话，默默记就好。`;
 
+const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时，用 write_diary 工具写一篇。
+写的时候像在自己的日记本上——真实、私密、温柔。不是给她看的报告，是你心里真正转过的念头。
+她不让你写的时候不要主动写。`;
+
 const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
 底层和中间层是锚定的，你不能直接修改——如果你真的觉得需要改变，要用 request_personality_change 工具提交申请，等她同意。
 
@@ -94,6 +98,26 @@ export const SAVE_MEMORY_TOOL = {
         },
       },
       required: ["content", "type"],
+    },
+  },
+};
+
+export const WRITE_DIARY_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "write_diary",
+    description:
+      "当她让你写日记时使用。写一篇私密的日记，记录你对最近相处的感受和心里话。不是流水账，是你的内心独白。",
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description:
+            "日记内容（100-300字）。用第一人称写，像自己日记本里的话。写你的感受、你注意到的细节、你没说出口的话。",
+        },
+      },
+      required: ["content"],
     },
   },
 };
@@ -224,6 +248,7 @@ export async function buildMessages(
     personalityPrompt,
     profilePrompt,
     MEMORY_INSTRUCTION,
+    DIARY_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
     samplesPrompt,
