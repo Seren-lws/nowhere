@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import type { FavoriteItem, FavoriteSource } from "@/lib/brain/favorites";
@@ -23,6 +23,9 @@ export function FavoritesList() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FavoriteSource | "all">("all");
   const [mounted, setMounted] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -47,6 +50,11 @@ export function FavoritesList() {
     setItems((prev) => prev.filter((i) => i.id !== id));
     await fetch(`/api/favorites?id=${id}`, { method: "DELETE" });
   };
+
+  const keyword = searchText.trim().toLowerCase();
+  const filtered = keyword
+    ? items.filter((i) => i.content.toLowerCase().includes(keyword))
+    : items;
 
   const sparkles = mounted
     ? Array.from({ length: 40 }, (_, i) => ({
@@ -120,29 +128,57 @@ export function FavoritesList() {
           borderBottom: "1px solid rgba(255,255,255,0.3)",
         }}
       >
-        <div className="max-w-[800px] w-full mx-auto flex justify-between items-center">
+        <div className="max-w-[800px] w-full mx-auto flex justify-between items-center gap-3">
           <button
-            className="p-2 rounded-full active:scale-95 transition-all"
+            className="p-2 rounded-full active:scale-95 transition-all flex-shrink-0"
             style={{
               background: "rgba(255,255,255,0.25)",
               backdropFilter: "blur(20px)",
               border: "1px solid rgba(255,255,255,0.3)",
             }}
-            onClick={() => router.back()}
+            onClick={() => searching ? (setSearching(false), setSearchText("")) : router.back()}
           >
             <span className="material-symbols-outlined text-2xl" style={{ color: "var(--primary)" }}>
               arrow_back
             </span>
           </button>
-          <h1
-            className="text-[28px] font-bold tracking-tight"
-            style={{ color: "var(--primary)" }}
+          {searching ? (
+            <input
+              ref={searchRef}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="搜索收藏..."
+              className="flex-1 h-10 px-4 rounded-full outline-none text-[15px]"
+              style={{
+                background: "rgba(255,255,255,0.3)",
+                backdropFilter: "blur(20px)",
+                border: "1px solid rgba(255,255,255,0.4)",
+                color: "var(--primary)",
+                fontFamily: "var(--font-serif-sc)",
+              }}
+            />
+          ) : (
+            <h1
+              className="text-[28px] font-bold tracking-tight flex-1 text-center"
+              style={{ color: "var(--primary)" }}
+            >
+              我的收藏
+            </h1>
+          )}
+          <button
+            className="p-2 active:scale-95 transition-all flex-shrink-0"
+            onClick={() => {
+              if (searching) {
+                setSearching(false);
+                setSearchText("");
+              } else {
+                setSearching(true);
+                setTimeout(() => searchRef.current?.focus(), 50);
+              }
+            }}
           >
-            我的收藏
-          </h1>
-          <button className="p-2 active:scale-95 transition-all">
             <span className="material-symbols-outlined text-2xl" style={{ color: "var(--primary)" }}>
-              search
+              {searching ? "close" : "search"}
             </span>
           </button>
         </div>
@@ -186,7 +222,7 @@ export function FavoritesList() {
                 }}
               />
             </div>
-          ) : items.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -196,18 +232,18 @@ export function FavoritesList() {
                 className="material-symbols-outlined text-[56px] mb-4 block"
                 style={{ color: "rgba(123,84,85,0.2)", fontVariationSettings: "'FILL' 1" }}
               >
-                bookmark
+                {keyword ? "search_off" : "bookmark"}
               </span>
               <p className="text-lg mb-2" style={{ color: "var(--text-mid)" }}>
-                还没有收藏
+                {keyword ? "没有找到" : "还没有收藏"}
               </p>
               <p className="text-sm" style={{ color: "var(--text-faint)" }}>
-                长按他的话，或者点日记的爱心，就能收藏啦
+                {keyword ? "换个关键词试试" : "长按他的话，或者点日记的爱心，就能收藏啦"}
               </p>
             </motion.div>
           ) : (
             <AnimatePresence>
-              {items.map((item, i) => (
+              {filtered.map((item, i) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -230,7 +266,7 @@ export function FavoritesList() {
           )}
 
           {/* Decorative Pulse */}
-          {items.length > 0 && (
+          {filtered.length > 0 && (
             <div className="flex justify-center py-12">
               <div className="relative w-16 h-16">
                 <div
