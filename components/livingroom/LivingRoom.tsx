@@ -20,11 +20,13 @@ import {
   HISTORY_WINDOW,
   loadHistory,
   saveHistory,
+  loadHistoryFromDb,
   saveMessageToDb,
   toContext,
   type ChatMessage,
   type DiaryShareData,
 } from "@/lib/brain/memory";
+import { clearChatMessages } from "@/lib/brain/db";
 import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -50,18 +52,27 @@ export function LivingRoom() {
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
-    const h = loadHistory();
-    if (h.length === 0) {
-      const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
-      setMessages([greet]);
-      saveHistory([greet]);
-    } else {
-      setMessages(h);
-    }
 
-    if (isChatReady(s)) {
-      triggerAutoDiary(s);
-    }
+    (async () => {
+      let h: ChatMessage[] = [];
+      try {
+        h = await loadHistoryFromDb();
+      } catch {}
+      if (h.length === 0) h = loadHistory();
+
+      if (h.length === 0) {
+        const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
+        setMessages([greet]);
+        saveHistory([greet]);
+      } else {
+        setMessages(h);
+        saveHistory(h);
+      }
+
+      if (isChatReady(s)) {
+        triggerAutoDiary(s);
+      }
+    })();
   }, []);
 
   const triggerAutoDiary = async (s: BrainSettings) => {
@@ -314,6 +325,7 @@ export function LivingRoom() {
     const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
     setMessages([greet]);
     saveHistory([greet]);
+    clearChatMessages("living-room").catch(() => {});
     setSelectedTs(null);
     setError(null);
     setShowMenu(false);

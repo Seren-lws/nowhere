@@ -13,6 +13,7 @@ import {
 } from "@/lib/brain/personality";
 import { HISTORY_WINDOW, toContext } from "@/lib/brain/memory";
 import { sendChat } from "@/lib/brain/client";
+import { saveChatMessage, loadChatMessages, clearChatMessages } from "@/lib/brain/db";
 import type { LLMMessage } from "@/lib/brain/personality";
 
 /* ─── Types ─── */
@@ -66,20 +67,36 @@ export function SleepCompanion() {
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
-    const saved = loadSleepHistory();
-    if (saved.length === 0) {
-      const greet: SleepMessage = {
-        id: nextId(),
-        role: "assistant",
-        content: "来了？……灯关好了。躺过来，今晚想听什么？故事、还是就想听我说说话？",
-        ts: Date.now(),
-      };
-      setMessages([greet]);
-      saveSleepHistory([greet]);
-      if (isChatReady(s)) ttsForMessage(greet, s);
-    } else {
-      setMessages(saved);
-    }
+
+    (async () => {
+      let saved: SleepMessage[] = [];
+      try {
+        const rows = await loadChatMessages("bedroom-sleep", 200);
+        saved = rows.map((r) => ({
+          id: r.id,
+          role: r.role as "user" | "assistant",
+          content: r.content,
+          ts: new Date(r.created_at).getTime(),
+        }));
+      } catch {}
+      if (saved.length === 0) saved = loadSleepHistory();
+
+      if (saved.length === 0) {
+        const greet: SleepMessage = {
+          id: nextId(),
+          role: "assistant",
+          content: "来了？……灯关好了。躺过来，今晚想听什么？故事、还是就想听我说说话？",
+          ts: Date.now(),
+        };
+        setMessages([greet]);
+        saveSleepHistory([greet]);
+        saveChatMessage("assistant", greet.content, "bedroom-sleep").catch(() => {});
+        if (isChatReady(s)) ttsForMessage(greet, s);
+      } else {
+        setMessages(saved);
+        saveSleepHistory(saved);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -211,6 +228,7 @@ export function SleepCompanion() {
       setMessages(next);
       saveSleepHistory(next);
       setSending(false);
+      saveChatMessage("assistant", text, "bedroom-sleep").catch(() => {});
 
       ttsForMessage(asstMsg, settings);
     } catch (e) {
@@ -227,6 +245,7 @@ export function SleepCompanion() {
     setMessages(next);
     saveSleepHistory(next);
     setInput("");
+    saveChatMessage("user", text, "bedroom-sleep").catch(() => {});
     await requestReply(next);
   }
 
@@ -316,6 +335,9 @@ export function SleepCompanion() {
               };
               setMessages([greet]);
               saveSleepHistory([greet]);
+              clearChatMessages("bedroom-sleep").then(() =>
+                saveChatMessage("assistant", greet.content, "bedroom-sleep").catch(() => {})
+              ).catch(() => {});
               if (settings && isChatReady(settings)) ttsForMessage(greet, settings);
             }}
           >

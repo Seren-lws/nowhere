@@ -95,6 +95,14 @@ export async function saveMemoryItem(item: {
   return data.id;
 }
 
+export async function clearChatMessages(room = "living-room"): Promise<void> {
+  const { error } = await supabase
+    .from("chat_messages")
+    .delete()
+    .eq("room", room);
+  if (error) throw new Error(`清空消息失败: ${error.message}`);
+}
+
 export async function fetchRecentAssistantMessages(
   room = "living-room",
   limit = 6,
