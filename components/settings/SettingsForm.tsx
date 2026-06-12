@@ -10,6 +10,7 @@ import {
 } from "@/lib/brain/config";
 import { testConnection } from "@/lib/brain/client";
 import { downloadExport, importBundle } from "@/lib/brain/export";
+import { syncSettingsToServer } from "@/lib/brain/server-config";
 
 const FIELDS: {
   key: keyof BrainSettings;
@@ -75,10 +76,15 @@ export function SettingsForm() {
     setSaved(false);
   };
 
-  const onSave = () => {
+  const onSave = async () => {
     saveSettings(s);
     setSaved(true);
     setNote(null);
+    try {
+      await syncSettingsToServer(s as unknown as Record<string, string>);
+    } catch {
+      setNote("本地已保存，但同步到服务端失败（定时任务可能无法运行）");
+    }
     window.setTimeout(() => setSaved(false), 2000);
   };
 
@@ -281,6 +287,39 @@ export function SettingsForm() {
               </span>
             </label>
           </div>
+        </GlassCard>
+
+        {/* 推送通知 */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            推送通知（Bark）
+          </h2>
+          <label className="block">
+            <span
+              className="mb-1.5 block text-[13px]"
+              style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+            >
+              Bark Device Key
+            </span>
+            <input
+              type="text"
+              value={s.barkKey}
+              onChange={(e) => update("barkKey", e.target.value)}
+              placeholder="打开 Bark App 复制 Key"
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+            />
+            <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+              用于园丁巡逻、心跳消息、定时提醒等推送到 iPhone
+            </span>
+          </label>
         </GlassCard>
 
         {/* 我的数据 */}

@@ -20,6 +20,8 @@ export interface BrainSettings {
   ttsModel: string;
   /** TTS 音色 ID（MiniMax 预设音色） */
   ttsVoice: string;
+  /** Bark 推送 Device Key（iOS 通知） */
+  barkKey: string;
 }
 
 export const DEFAULT_SETTINGS: BrainSettings = {
@@ -30,6 +32,7 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   embeddingModel: "text-embedding-3-small",
   ttsModel: "speech-2.8-turbo",
   ttsVoice: "male-qn-qingse",
+  barkKey: "",
 };
 
 export const SETTINGS_KEY = "nowhere:settings";

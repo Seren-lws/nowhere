@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron?task=gardener",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
