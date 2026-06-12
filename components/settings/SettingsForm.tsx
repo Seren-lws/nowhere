@@ -24,6 +24,20 @@ const FIELDS: {
   { key: "embeddingModel", label: "向量检索模型", hint: "语义检索 embedding（P1 启用）" },
 ];
 
+const TTS_VOICES: { id: string; label: string }[] = [
+  { id: "male-qn-qingse", label: "青涩青年（温柔）" },
+  { id: "male-qn-jingying", label: "精英青年（沉稳）" },
+  { id: "male-qn-badao", label: "霸道青年（低沉）" },
+  { id: "male-qn-daxuesheng", label: "大学生（阳光）" },
+  { id: "presenter_male", label: "男主持人（磁性）" },
+  { id: "audiobook_male_1", label: "有声书男声（讲故事）" },
+  { id: "audiobook_male_2", label: "有声书男声二（沉稳）" },
+  { id: "female-shaonv", label: "少女（甜美）" },
+  { id: "female-yujie", label: "御姐（成熟）" },
+  { id: "presenter_female", label: "女主持人" },
+  { id: "audiobook_female_1", label: "有声书女声" },
+];
+
 /** 旧家同款玻璃卡片 */
 function GlassCard({ children }: { children: React.ReactNode }) {
   return (
@@ -209,6 +223,64 @@ export function SettingsForm() {
               {testMsg.text}
             </p>
           )}
+        </GlassCard>
+
+        {/* 语音设置 */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            语音（睡眠陪伴）
+          </h2>
+          <div className="space-y-4">
+            <label className="block">
+              <span
+                className="mb-1.5 block text-[13px]"
+                style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+              >
+                TTS 模型
+              </span>
+              <input
+                type="text"
+                value={s.ttsModel}
+                onChange={(e) => update("ttsModel", e.target.value)}
+                spellCheck={false}
+                autoComplete="off"
+                className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+                style={inputStyle}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+              />
+              <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                MiniMax 语音模型，如 speech-2.8-turbo
+              </span>
+            </label>
+
+            <label className="block">
+              <span
+                className="mb-1.5 block text-[13px]"
+                style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+              >
+                音色
+              </span>
+              <select
+                value={s.ttsVoice}
+                onChange={(e) => update("ttsVoice", e.target.value)}
+                className="w-full px-3.5 py-2.5 text-[13.5px] outline-none appearance-none cursor-pointer"
+                style={inputStyle}
+              >
+                {TTS_VOICES.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                他讲故事的声音
+              </span>
+            </label>
+          </div>
         </GlassCard>
 
         {/* 我的数据 */}

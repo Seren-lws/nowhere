@@ -16,6 +16,10 @@ export interface BrainSettings {
   gardenerModel: string;
   /** 语义检索（embedding，P1 启用） */
   embeddingModel: string;
+  /** TTS 模型（MiniMax speech-2.8-turbo 等） */
+  ttsModel: string;
+  /** TTS 音色 ID（MiniMax 预设音色） */
+  ttsVoice: string;
 }
 
 export const DEFAULT_SETTINGS: BrainSettings = {
@@ -24,6 +28,8 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   chatModel: "gpt-4o",
   gardenerModel: "gpt-4o-mini",
   embeddingModel: "text-embedding-3-small",
+  ttsModel: "speech-2.8-turbo",
+  ttsVoice: "male-qn-qingse",
 };
 
 export const SETTINGS_KEY = "nowhere:settings";
