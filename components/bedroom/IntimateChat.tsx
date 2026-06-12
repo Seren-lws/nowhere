@@ -44,6 +44,7 @@ export function IntimateChat() {
   const [atBottom, setAtBottom] = useState(true);
   const [favToast, setFavToast] = useState(false);
   const [diaryToast, setDiaryToast] = useState(false);
+  const [memoryToast, setMemoryToast] = useState(false);
 
   // Modals
   const [showPresets, setShowPresets] = useState(false);
@@ -306,7 +307,6 @@ export function IntimateChat() {
         setTimeout(() => setDiaryToast(false), 2000);
       } catch {}
     } else if (action === "memory" && ready) {
-      // Ask AI to summarize and save memory
       try {
         const ctx = toContext(messages).slice(-30);
         const prompt = `请总结下面这段卧室对话中值得长期记住的内容，用 save_memory 工具保存（1-3条最重要的）。\n\n${ctx.map((m) => `${m.role === "user" ? "她" : "我"}：${m.content}`).join("\n")}`;
@@ -315,6 +315,8 @@ export function IntimateChat() {
           settings,
           [SAVE_MEMORY_TOOL],
         );
+        setMemoryToast(true);
+        setTimeout(() => setMemoryToast(false), 2000);
       } catch {}
     }
 
@@ -609,6 +611,19 @@ export function IntimateChat() {
             style={{ background: "rgba(180,170,220,0.3)", backdropFilter: "blur(12px)", color: "white", fontFamily: "var(--font-serif-sc)", fontSize: "13px" }}
           >
             📖 日记已写好
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {memoryToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-40 z-50 px-5 py-2.5 rounded-full"
+            style={{ background: "rgba(170,200,210,0.3)", backdropFilter: "blur(12px)", color: "white", fontFamily: "var(--font-serif-sc)", fontSize: "13px" }}
+          >
+            📌 记忆已保存
           </motion.div>
         )}
       </AnimatePresence>
