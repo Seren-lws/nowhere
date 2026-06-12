@@ -267,6 +267,12 @@
   50% { transform: translateY(-30px) rotate(5deg); }
 }
 
+@keyframes heartPop {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(-50%, -150%) scale(1.5); opacity: 0; }
+}
+
 @keyframes bubble-rise {
   0%   { transform: translateY(100vh) translateX(0) scale(0.5); opacity: 0; }
   20%  { opacity: 0.4; }

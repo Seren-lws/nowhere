@@ -251,7 +251,7 @@ export function MyDiaryList() {
                 key={entry.id}
                 entry={entry}
                 index={i}
-                onClick={() => router.push(`/study/my-drawer/diary/${entry.id}`)}
+                onClick={() => router.push(`/study/my-drawer/diary/${entry.id}/detail`)}
               />
             ))
           )}
@@ -357,6 +357,11 @@ function seededRandom(seed: number) {
 }
 
 function StarField() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" />;
+
   const stars = Array.from({ length: 60 }, (_, i) => ({
     id: i,
     size: seededRandom(i * 7 + 1) * 2 + 1,
@@ -373,15 +378,12 @@ function StarField() {
           key={s.id}
           className="absolute rounded-full bg-white"
           style={{
-            width: `${s.size}px`,
-            height: `${s.size}px`,
+            width: s.size,
+            height: s.size,
             left: `${s.left}%`,
             top: `${s.top}%`,
-            opacity: "0",
-            animationName: "twinkle",
-            animationDuration: `${s.duration}s`,
-            animationIterationCount: "infinite",
-            animationTimingFunction: "ease-in-out",
+            opacity: 0,
+            animation: `twinkle ${s.duration}s infinite ease-in-out`,
             animationDelay: `${s.delay}s`,
           }}
         />
