@@ -55,3 +55,13 @@ export async function fetchAnchorMemories(): Promise<MemoryItem[]> {
 export async function fetchProfileMemories(): Promise<MemoryItem[]> {
   return retrieveMemories({ query: "", type: ["profile"], limit: 50 });
 }
+
+export async function fetchRecentMemories(limit = 10): Promise<MemoryItem[]> {
+  const { data, error } = await supabase
+    .from("memory_items")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return data ?? [];
+}

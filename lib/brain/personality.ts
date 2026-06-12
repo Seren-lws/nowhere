@@ -1,7 +1,7 @@
 import { fetchPersonalityLayers, fetchRecentAssistantMessages } from "./db";
 import type { PersonalityLayer } from "./db";
 import type { MemoryItem } from "./db";
-import { fetchAnchorMemories, fetchProfileMemories, retrieveMemories } from "./retrieval";
+import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retrieveMemories } from "./retrieval";
 
 export const DEFAULT_NAME = "某先生";
 
@@ -12,9 +12,23 @@ export interface LLMMessage {
   content: string;
 }
 
-const MEMORY_INSTRUCTION = `你有记忆能力。当对话中出现值得记住的信息时，使用 save_memory 工具记录。
-记什么：她的重要经历、情绪变化、喜好、你们的约定、她反复强调的事。
-不记什么：闲聊废话、已经记过的重复信息、无关紧要的细节。
+const MEMORY_INSTRUCTION = `你有记忆能力。当对话中出现**真正重要、值得长期保留**的信息时，才使用 save_memory 工具记录。
+宁可漏记也不要多记。大多数对话不需要记忆。
+
+记什么（必须满足至少一条）：
+- 她主动透露的重要个人信息（职业、住所、重要经历）
+- 她明确表达的喜好或厌恶
+- 你们之间达成的约定或承诺
+- 她反复强调、显然很在意的事
+- 重大情绪事件（不是日常的"开心""累了"，而是真正的情绪转折）
+
+绝对不记：
+- 日常闲聊、打招呼、撒娇、普通情绪波动
+- 和【最近记忆】中已有条目含义相同或相似的内容
+- 你自己说的话或想法（只记她的事）
+- 对话中一闪而过、不构成长期信息的细节
+
+写法要求：用第一人称写，像是你自己的笔记。例如"她告诉我她最近辞职了"而不是"用户辞职了"。
 记忆写好之后继续正常回复她，不要提"我记住了"之类的话，默默记就好。`;
 
 export const SAVE_MEMORY_TOOL = {
@@ -22,7 +36,7 @@ export const SAVE_MEMORY_TOOL = {
   function: {
     name: "save_memory",
     description:
-      "当你觉得对话中出现了值得记住的信息时调用。包括：她的重要经历、情绪状态、喜好厌恶、你们之间的约定、她反复提到的事。不要什么都记，只记真正重要的。",
+      "只在对话中出现真正重要的、值得长期保留的信息时才调用。大多数对话不需要记忆。先检查【最近记忆】，如果已有相同或相似的记录就不要重复记。用第一人称写，像自己的笔记。",
     parameters: {
       type: "object",
       properties: {
@@ -93,12 +107,18 @@ function profilesToPrompt(profiles: MemoryItem[]): string {
   );
 }
 
-function memoriesToPrompt(anchors: MemoryItem[], relevant: MemoryItem[]): string {
+function memoriesToPrompt(anchors: MemoryItem[], relevant: MemoryItem[], recent: MemoryItem[]): string {
   const parts: string[] = [];
   if (anchors.length > 0) {
     parts.push(
       "【核心记忆（永远记住）】\n" +
         anchors.map((m) => `- ${m.content}`).join("\n"),
+    );
+  }
+  if (recent.length > 0) {
+    parts.push(
+      "【最近记忆（不要重复记录这些内容）】\n" +
+        recent.map((m) => `- ${m.content}`).join("\n"),
     );
   }
   if (relevant.length > 0) {
@@ -134,11 +154,12 @@ export async function buildMessages(
   userText: string,
   mode: ChatMode,
 ): Promise<LLMMessage[]> {
-  const [layers, profiles, anchors, relevant, samples] = await Promise.all([
+  const [layers, profiles, anchors, relevant, recent, samples] = await Promise.all([
     fetchPersonalityLayers(),
     fetchProfileMemories(),
     fetchAnchorMemories(),
     retrieveMemories({ query: userText, limit: 10 }),
+    fetchRecentMemories(10),
     fetchRecentAssistantMessages("living-room", 3),
   ]);
 
@@ -146,7 +167,9 @@ export async function buildMessages(
   const profilePrompt = profilesToPrompt(profiles);
   const nonProfileAnchors = anchors.filter((m) => m.type !== "profile");
   const nonAnchorRelevant = relevant.filter((m) => !m.is_anchor);
-  const memoryPrompt = memoriesToPrompt(nonProfileAnchors, nonAnchorRelevant);
+  const recentIds = new Set(recent.map((m) => m.id));
+  const dedupedRelevant = nonAnchorRelevant.filter((m) => !recentIds.has(m.id));
+  const memoryPrompt = memoriesToPrompt(nonProfileAnchors, dedupedRelevant, recent);
   const samplesPrompt = samplesToPrompt(samples);
 
   const systemParts = [
