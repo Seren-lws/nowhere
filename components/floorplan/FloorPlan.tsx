@@ -294,8 +294,8 @@ function CompanionBubble({ status }: { status: CompanionStatus }) {
         src="/floorplan/companion.png"
         alt="他"
         style={{
-          width: 110,
-          height: 110,
+          width: 220,
+          height: 220,
           objectFit: "contain",
           animation: "gentle-float 5s ease-in-out 1s infinite",
           filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.15))",
