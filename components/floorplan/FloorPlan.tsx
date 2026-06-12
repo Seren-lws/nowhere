@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ENTERING_FLAG } from "@/lib/entrance/layout";
+import { HE_POINT_BY_ROOM } from "@/lib/floorplan/stickers";
 
 interface RoomDef {
   key: string;
@@ -259,11 +260,56 @@ const EFFECTS: Record<string, () => React.ReactNode> = {
   vault: VaultEffects,
 };
 
+interface CompanionStatus {
+  room: string;
+  status_text: string;
+  mood: string;
+}
+
+function CompanionBubble({ status }: { status: CompanionStatus }) {
+  const pos = HE_POINT_BY_ROOM[status.room] ?? { left: 50, top: 50 };
+  return (
+    <div
+      className="absolute z-[15] pointer-events-none flex flex-col items-center"
+      style={{ left: `${pos.left}%`, top: `${pos.top}%`, transform: "translate(-50%, -50%)" }}
+    >
+      {/* Status text bubble */}
+      <div
+        className="mb-2 px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap"
+        style={{
+          background: "rgba(255,255,255,0.75)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: "1px solid rgba(255,255,255,0.5)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+          color: "rgba(80,68,68,0.8)",
+          letterSpacing: "0.5px",
+          animation: "gentle-float 4s ease-in-out infinite",
+        }}
+      >
+        {status.status_text}
+      </div>
+      {/* Glowing orb */}
+      <div
+        className="rounded-full"
+        style={{
+          width: 16,
+          height: 16,
+          background: "radial-gradient(circle, rgba(200,170,220,0.9) 0%, rgba(200,170,220,0.3) 60%, transparent 100%)",
+          boxShadow: "0 0 20px rgba(200,170,220,0.5), 0 0 40px rgba(200,170,220,0.2)",
+          animation: "heartbeat 2s ease-in-out infinite",
+        }}
+      />
+    </div>
+  );
+}
+
 export function FloorPlan() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeRoom, setActiveRoom] = useState("living-room");
   const [receding, setReceding] = useState(false);
+  const [companionStatus, setCompanionStatus] = useState<CompanionStatus | null>(null);
 
   useEffect(() => {
     let entered = false;
@@ -281,6 +327,13 @@ export function FloorPlan() {
       if (el) el.scrollIntoView({ behavior: "instant" });
     }, 50);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/companion-status")
+      .then((r) => r.json())
+      .then((d) => { if (d.room) setCompanionStatus(d); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -364,6 +417,10 @@ export function FloorPlan() {
               />
 
               {EffectComponent && <EffectComponent />}
+
+              {companionStatus && companionStatus.room === room.key && (
+                <CompanionBubble status={companionStatus} />
+              )}
 
               <div className="watercolor-overlay" />
 

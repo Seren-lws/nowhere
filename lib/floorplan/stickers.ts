@@ -61,9 +61,13 @@ export const MOCK_HOME_STATE: HomeState = {
 export const FIREPLACE = { left: 87, top: 74.5, size: 9 };
 
 /**
- * "他在某间"时光点落点（% of 全幅）。先给已落地的客厅（坐沙发上）。
- * 后期他的形象定下来后，这个光点可换成 QQ 小人坐在此处。
+ * "他在某间"时落点位置（% of 房间区域）。
+ * left/top 是相对于该房间 section 的百分比定位。
  */
 export const HE_POINT_BY_ROOM: Record<string, { left: number; top: number }> = {
-  "living-room": { left: 41, top: 74 },
+  "study": { left: 35, top: 55 },
+  "playroom": { left: 50, top: 50 },
+  "bedroom": { left: 40, top: 55 },
+  "living-room": { left: 35, top: 50 },
+  "vault": { left: 50, top: 45 },
 };
