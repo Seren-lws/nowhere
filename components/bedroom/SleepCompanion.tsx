@@ -292,27 +292,38 @@ export function SleepCompanion() {
           </span>
         </div>
 
-        <button
-          className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-          style={{ background: "rgba(255,255,255,0.06)" }}
-          onClick={() => {
-            if (audioRef.current) audioRef.current.pause();
-            setPlaying(null);
-            const greet: SleepMessage = {
-              id: nextId(),
-              role: "assistant",
-              content: "来了？……灯关好了。躺过来，今晚想听什么？故事、还是就想听我说说话？",
-              ts: Date.now(),
-            };
-            setMessages([greet]);
-            saveSleepHistory([greet]);
-            if (settings && isChatReady(settings)) ttsForMessage(greet, settings);
-          }}
-        >
-          <span className="material-symbols-outlined text-[18px]" style={{ color: "rgba(255,255,255,0.5)" }}>
-            refresh
-          </span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+            onClick={() => router.push("/settings")}
+          >
+            <span className="material-symbols-outlined text-[18px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              settings
+            </span>
+          </button>
+          <button
+            className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+            onClick={() => {
+              if (audioRef.current) audioRef.current.pause();
+              setPlaying(null);
+              const greet: SleepMessage = {
+                id: nextId(),
+                role: "assistant",
+                content: "来了？……灯关好了。躺过来，今晚想听什么？故事、还是就想听我说说话？",
+                ts: Date.now(),
+              };
+              setMessages([greet]);
+              saveSleepHistory([greet]);
+              if (settings && isChatReady(settings)) ttsForMessage(greet, settings);
+            }}
+          >
+            <span className="material-symbols-outlined text-[18px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              refresh
+            </span>
+          </button>
+        </div>
       </header>
 
       {/* Messages */}
