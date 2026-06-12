@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { supabase } from "@/lib/supabase";
+import { loadSettings } from "@/lib/brain/config";
+import { resolveConflict as resolveConflictAction } from "@/lib/brain/gardener";
 
 interface GardenerLog {
   id: string;
@@ -38,31 +40,61 @@ const ICON_MAP: Record<
 export function PulseWorkbench() {
   const [logs, setLogs] = useState<GardenerLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [patrolling, setPatrolling] = useState(false);
+  const [patrolMsg, setPatrolMsg] = useState("");
+
+  const fetchLogs = async () => {
+    try {
+      const { data } = await supabase
+        .from("gardener_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setLogs(data ?? []);
+    } catch {
+      // table may not exist yet
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from("gardener_logs")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        setLogs(data ?? []);
-      } catch {
-        // table may not exist yet
-      }
-      setLoading(false);
-    })();
+    fetchLogs().then(() => setLoading(false));
   }, []);
 
+  const startPatrol = async () => {
+    const settings = loadSettings();
+    if (!settings.apiKey || !settings.gardenerModel) {
+      setPatrolMsg("请先到设置里填好 API Key 和园丁模型");
+      return;
+    }
+    setPatrolling(true);
+    setPatrolMsg("园丁正在巡逻中…");
+    try {
+      const res = await fetch("/api/gardener", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          config: {
+            baseUrl: settings.baseUrl,
+            apiKey: settings.apiKey,
+            gardenerModel: settings.gardenerModel,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPatrolMsg(data.error || "巡逻失败了");
+      } else {
+        setPatrolMsg(data.summary || "巡逻完成");
+        await fetchLogs();
+      }
+    } catch {
+      setPatrolMsg("巡逻出错了，请检查网络和设置");
+    }
+    setPatrolling(false);
+  };
+
   const resolveConflict = async (logId: string, choice: "first" | "second") => {
-    await supabase
-      .from("gardener_logs")
-      .update({
-        status: "resolved",
-        metadata: { resolved_choice: choice },
-      })
-      .eq("id", logId);
+    await resolveConflictAction(logId, choice);
     setLogs((prev) =>
       prev.map((l) =>
         l.id === logId ? { ...l, status: "resolved" as const } : l,
@@ -74,24 +106,64 @@ export function PulseWorkbench() {
     <div className="flex flex-col gap-6">
       {/* Page header */}
       <div className="mb-2 mt-3">
-        <h2
-          className="text-[28px] font-semibold mb-2"
-          style={{
-            fontFamily: "var(--font-serif-sc)",
-            color: "var(--text-deep)",
-          }}
-        >
-          园丁日志
-        </h2>
-        <p
-          className="text-[16px] leading-6 max-w-md"
-          style={{
-            fontFamily: "var(--font-serif-sc)",
-            color: "var(--text-mid)",
-          }}
-        >
-          维护内心的秩序，修剪记忆的枝丫。
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2
+              className="text-[28px] font-semibold mb-2"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                color: "var(--text-deep)",
+              }}
+            >
+              园丁日志
+            </h2>
+            <p
+              className="text-[16px] leading-6 max-w-md"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                color: "var(--text-mid)",
+              }}
+            >
+              维护内心的秩序，修剪记忆的枝丫。
+            </p>
+          </div>
+          <button
+            onClick={startPatrol}
+            disabled={patrolling}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-medium transition-all active:scale-95 disabled:opacity-50 mt-1"
+            style={{
+              fontFamily: "var(--font-serif-sc)",
+              background: "var(--primary)",
+              color: "white",
+              boxShadow: "0 2px 8px rgba(123,84,85,0.3)",
+            }}
+          >
+            <span
+              className="material-symbols-outlined text-[16px]"
+              style={{
+                animation: patrolling ? "spin 1.5s linear infinite" : undefined,
+              }}
+            >
+              {patrolling ? "progress_activity" : "psychiatry"}
+            </span>
+            {patrolling ? "巡逻中…" : "手动巡逻"}
+          </button>
+        </div>
+        {patrolMsg && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-[13px] mt-3 px-3 py-2 rounded-lg"
+            style={{
+              fontFamily: "var(--font-serif-sc)",
+              color: "var(--text-mid)",
+              background: "rgba(255,255,255,0.4)",
+              border: "1px solid rgba(255,255,255,0.6)",
+            }}
+          >
+            {patrolMsg}
+          </motion.p>
+        )}
       </div>
 
       {/* Content */}
