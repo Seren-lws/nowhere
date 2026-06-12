@@ -23,6 +23,7 @@ export async function sendChat(
   messages: LLMMessage[],
   settings: BrainSettings,
   tools?: unknown[],
+  room?: string,
 ): Promise<ChatResponse> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -35,6 +36,7 @@ export async function sendChat(
         model: settings.chatModel,
       },
       tools,
+      room,
     }),
   });
   if (!res.ok) {

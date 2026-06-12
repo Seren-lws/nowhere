@@ -20,6 +20,7 @@ interface ChatRequest {
   messages: { role: string; content: string }[];
   config: { baseUrl: string; apiKey: string; model: string };
   tools?: unknown[];
+  room?: string;
 }
 
 export async function POST(req: Request) {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "请求格式不对" }, { status: 400 });
   }
 
-  const { messages, config, tools } = body;
+  const { messages, config, tools, room: chatRoom } = body;
   if (!config?.baseUrl || !config?.apiKey || !config?.model) {
     return NextResponse.json(
       { error: "还没配置好：请到设置里填中转站、API Key 和对话模型" },
@@ -165,7 +166,7 @@ export async function POST(req: Request) {
               source: args.source ?? "chat",
               content: args.content,
               owner: "companion",
-              metadata: { date: tokyoDate, room: "living-room" },
+              metadata: { date: tokyoDate, room: chatRoom || "living-room" },
             });
             savedFavorites.push({
               content: args.content,

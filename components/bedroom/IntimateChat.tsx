@@ -1,0 +1,993 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
+import { isChatReady, loadSettings, type BrainSettings } from "@/lib/brain/config";
+import {
+  SAVE_MEMORY_TOOL,
+  SAVE_FAVORITE_TOOL,
+  WRITE_DIARY_TOOL,
+  parseReply,
+  type ChatMode,
+} from "@/lib/brain/personality";
+import { HISTORY_WINDOW, toContext, type ChatMessage } from "@/lib/brain/memory";
+import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
+import type { BedroomPresets, BedroomSession } from "@/lib/brain/bedroom";
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const BEDROOM_GREETING = "……你来了。（轻轻拉过你的手）这里只有我们。";
+
+/* ════════════════════════════════════════
+   Main Component
+   ════════════════════════════════════════ */
+
+export function IntimateChat() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [settings, setSettings] = useState<BrainSettings | null>(null);
+
+  // Session state
+  const [sessions, setSessions] = useState<BedroomSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeSession, setActiveSession] = useState<BedroomSession | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<ChatMode>("sentences");
+  const [selectedTs, setSelectedTs] = useState<number | null>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [favToast, setFavToast] = useState(false);
+
+  // Modals
+  const [showPresets, setShowPresets] = useState(false);
+  const [showEndDialog, setShowEndDialog] = useState(false);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  /* ─── Init ─── */
+
+  useEffect(() => {
+    const s = loadSettings();
+    setSettings(s);
+    loadSessions();
+  }, []);
+
+  const loadSessions = async () => {
+    try {
+      const res = await fetch("/api/bedroom/sessions");
+      const data = await res.json();
+      setSessions(Array.isArray(data) ? data : []);
+    } catch {
+      setSessions([]);
+    }
+  };
+
+  // Auto-open or create session
+  useEffect(() => {
+    if (activeSessionId || sessions.length === 0 && sessions !== null) return;
+    const active = sessions.find((s) => s.status === "active");
+    if (active) {
+      openSession(active.id);
+    }
+  }, [sessions]);
+
+  const openSession = useCallback(async (id: string) => {
+    setActiveSessionId(id);
+    setSidebarOpen(false);
+    setSelectedTs(null);
+    setError(null);
+    try {
+      // Load session details
+      const sessRes = await fetch("/api/bedroom/sessions");
+      const allSessions: BedroomSession[] = await sessRes.json();
+      const sess = allSessions.find((s) => s.id === id);
+      setActiveSession(sess ?? null);
+
+      // Load messages
+      const msgRes = await fetch(`/api/bedroom/messages?sessionId=${id}`);
+      const dbMsgs = await msgRes.json();
+      if (Array.isArray(dbMsgs) && dbMsgs.length > 0) {
+        const chatMsgs: ChatMessage[] = dbMsgs.map((m: { id: string; role: string; content: string; created_at: string }) => ({
+          role: m.role as ChatMessage["role"],
+          content: m.content,
+          ts: new Date(m.created_at).getTime(),
+          dbId: m.id,
+        }));
+        setMessages(chatMsgs);
+      } else {
+        // New session — show greeting
+        const greet: ChatMessage = { role: "assistant", content: BEDROOM_GREETING, ts: Date.now() };
+        setMessages([greet]);
+        saveMsg(id, "assistant", BEDROOM_GREETING);
+      }
+    } catch {
+      setMessages([{ role: "assistant", content: BEDROOM_GREETING, ts: Date.now() }]);
+    }
+  }, []);
+
+  const createNewSession = async (presets?: BedroomPresets, transCtx?: { role: string; content: string }[]) => {
+    try {
+      const res = await fetch("/api/bedroom/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ presets: presets ?? {}, transitionContext: transCtx }),
+      });
+      const sess: BedroomSession = await res.json();
+      setSessions((prev) => [sess, ...prev]);
+      openSession(sess.id);
+      return sess;
+    } catch {
+      return null;
+    }
+  };
+
+  // Handle transition from living room
+  const transitionHandled = useRef(false);
+  useEffect(() => {
+    if (transitionHandled.current || !settings) return;
+    const fromLiving = searchParams.get("from") === "livingroom";
+    const ctxParam = searchParams.get("context");
+    if (fromLiving && ctxParam) {
+      transitionHandled.current = true;
+      try {
+        const ctx = JSON.parse(decodeURIComponent(ctxParam));
+        createNewSession({}, ctx);
+        router.replace("/bedroom/intimate", { scroll: false });
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [settings, searchParams]);
+
+  /* ─── Scroll ─── */
+
+  useEffect(() => {
+    if (atBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, sending, atBottom]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 100);
+  };
+
+  /* ─── Chat Logic ─── */
+
+  const ready = settings ? isChatReady(settings) : false;
+
+  const saveMsg = async (sessionId: string, role: string, content: string) => {
+    try {
+      const res = await fetch("/api/bedroom/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId, role, content }),
+      });
+      const { id } = await res.json();
+      return id as string;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const requestReply = async (base: ChatMessage[]) => {
+    if (!settings || !activeSessionId || !activeSession) return;
+    const last = base[base.length - 1];
+    const ctx = toContext(base.slice(0, -1)).slice(-HISTORY_WINDOW);
+    setSending(true);
+    setError(null);
+    try {
+      // Build bedroom-specific messages via API
+      const { buildBedroomMessages } = await import("@/lib/brain/bedroom");
+      const assembled = await buildBedroomMessages(
+        ctx,
+        last.content,
+        mode,
+        activeSession.presets ?? {},
+        activeSession.transition_context,
+      );
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL], "bedroom");
+      const { inner, parts } = parseReply(resp.content, mode);
+      setSending(false);
+
+      const acc = [...base];
+      let t = Date.now();
+
+      if (resp.savedMemories && resp.savedMemories.length > 0) {
+        await delay(150);
+        acc.push({ role: "memory", content: "", ts: t++, memories: resp.savedMemories });
+        setMessages([...acc]);
+      }
+
+      if (resp.savedFavorites && resp.savedFavorites.length > 0) {
+        await delay(150);
+        acc.push({
+          role: "fav-notify",
+          content: resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话",
+          ts: t++,
+        });
+        setMessages([...acc]);
+      }
+
+      if (inner) {
+        await delay(220);
+        const innerMsg: ChatMessage = { role: "inner", content: inner, ts: t++ };
+        acc.push(innerMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "inner", inner).then((dbId) => { innerMsg.dbId = dbId; });
+      }
+
+      for (const p of parts) {
+        await delay(mode === "sentences" ? 620 : 280);
+        const asstMsg: ChatMessage = { role: "assistant", content: p, ts: t++ };
+        acc.push(asstMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "assistant", p).then((dbId) => { asstMsg.dbId = dbId; });
+      }
+    } catch (e) {
+      setSending(false);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || sending || !settings || !activeSessionId) return;
+    setSelectedTs(null);
+    const userMsg: ChatMessage = { role: "user", content: text, ts: Date.now() };
+    const acc = [...messages, userMsg];
+    setMessages(acc);
+    setInput("");
+    saveMsg(activeSessionId, "user", text).then((dbId) => { userMsg.dbId = dbId; });
+    await requestReply(acc);
+  };
+
+  const editResend = (ts: number) => {
+    const idx = messages.findIndex((m) => m.ts === ts);
+    if (idx < 0) return;
+    const target = messages[idx];
+    setMessages(messages.slice(0, idx));
+    setInput(target.content);
+    setSelectedTs(null);
+  };
+
+  const retryFrom = async (ts: number) => {
+    const idx = messages.findIndex((m) => m.ts === ts);
+    if (idx < 0) return;
+    const truncated = messages.slice(0, idx + 1);
+    setMessages(truncated);
+    setSelectedTs(null);
+    await requestReply(truncated);
+  };
+
+  const favoriteChat = async (text: string, ts: number) => {
+    try {
+      const d = new Date(ts);
+      const tokyoDate = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
+      const dateStr = `${tokyoDate.getFullYear()}-${String(tokyoDate.getMonth() + 1).padStart(2, "0")}-${String(tokyoDate.getDate()).padStart(2, "0")}`;
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "bedroom",
+          content: text,
+          owner: "user",
+          metadata: { date: dateStr, room: "bedroom" },
+        }),
+      });
+      setFavToast(true);
+      setTimeout(() => setFavToast(false), 1500);
+    } catch {}
+  };
+
+  /* ─── End Session ─── */
+
+  const endSession = async (action: "diary" | "memory" | "close") => {
+    if (!activeSessionId || !settings) return;
+    setShowEndDialog(false);
+
+    if (action === "diary" && ready) {
+      // Ask AI to write a diary about this session
+      try {
+        const ctx = toContext(messages).slice(-30);
+        const prompt = `请根据下面这段卧室里的亲密对话，写一篇私密日记（100-300字）。用第一人称写，像在自己日记本上写的那样——真实、温柔、私密。\n\n${ctx.map((m) => `${m.role === "user" ? "她" : "我"}：${m.content}`).join("\n")}`;
+        const resp = await sendChat(
+          [{ role: "user", content: prompt }],
+          { ...settings, chatModel: settings.chatModel },
+          [WRITE_DIARY_TOOL],
+        );
+        if (resp.content) {
+          // Diary was written via tool call, or we can manually create one
+          await fetch("/api/diary", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              author: "companion",
+              content: resp.content.replace(/^心声[:：][\s\S]*?---\s*/, "").trim(),
+            }),
+          });
+        }
+      } catch {}
+    } else if (action === "memory" && ready) {
+      // Ask AI to summarize and save memory
+      try {
+        const ctx = toContext(messages).slice(-30);
+        const prompt = `请总结下面这段卧室对话中值得长期记住的内容，用 save_memory 工具保存（1-3条最重要的）。\n\n${ctx.map((m) => `${m.role === "user" ? "她" : "我"}：${m.content}`).join("\n")}`;
+        await sendChat(
+          [{ role: "system", content: "你是记忆助手。总结以下对话中值得记住的要点。" }, { role: "user", content: prompt }],
+          settings,
+          [SAVE_MEMORY_TOOL],
+        );
+      } catch {}
+    }
+
+    // Mark session as ended
+    await fetch("/api/bedroom/sessions", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: activeSessionId, status: "ended" }),
+    });
+
+    // Auto-generate title from first user message
+    const firstUser = messages.find((m) => m.role === "user");
+    if (firstUser) {
+      const title = firstUser.content.slice(0, 20) + (firstUser.content.length > 20 ? "…" : "");
+      await fetch("/api/bedroom/sessions", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: activeSessionId, title }),
+      });
+    }
+
+    setActiveSessionId(null);
+    setActiveSession(null);
+    setMessages([]);
+    loadSessions();
+  };
+
+  /* ─── Presets ─── */
+
+  const [presetScene, setPresetScene] = useState("");
+  const [presetStyle, setPresetStyle] = useState("");
+  const [presetExtra, setPresetExtra] = useState("");
+
+  useEffect(() => {
+    if (activeSession) {
+      setPresetScene(activeSession.presets?.scene ?? "");
+      setPresetStyle(activeSession.presets?.style ?? "");
+      setPresetExtra(activeSession.presets?.extra ?? "");
+    }
+  }, [activeSession]);
+
+  const savePresets = async () => {
+    if (!activeSessionId) return;
+    const presets: BedroomPresets = {};
+    if (presetScene.trim()) presets.scene = presetScene.trim();
+    if (presetStyle.trim()) presets.style = presetStyle.trim();
+    if (presetExtra.trim()) presets.extra = presetExtra.trim();
+    await fetch("/api/bedroom/sessions", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: activeSessionId, presets }),
+    });
+    setActiveSession((prev) => prev ? { ...prev, presets } : prev);
+    setShowPresets(false);
+  };
+
+  /* ─── No session view ─── */
+
+  if (!activeSessionId) {
+    return (
+      <div className="fixed inset-0 overflow-hidden" style={{ background: "#0d0c15", color: "white" }}>
+        <BedroomBg />
+        <header className="fixed top-0 w-full z-50 flex items-center justify-between px-5 h-16" style={{ backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => router.push("/bedroom")}>
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <span className="text-[15px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.6)" }}>亲密聊天</span>
+          <div className="w-10" />
+        </header>
+
+        <main className="h-full flex flex-col items-center justify-center px-6 gap-6">
+          <button
+            onClick={() => createNewSession()}
+            className="px-8 py-4 rounded-2xl active:scale-95 transition-transform"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              backdropFilter: "blur(40px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              fontFamily: "var(--font-serif-sc)",
+              color: "white",
+              fontSize: "16px",
+            }}
+          >
+            开始新对话
+          </button>
+
+          {sessions.length > 0 && (
+            <div className="w-full max-w-[400px] space-y-3 mt-4">
+              <p className="text-center text-[13px]" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-serif-sc)" }}>
+                过往对话
+              </p>
+              {sessions.slice(0, 10).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => openSession(s.id)}
+                  className="w-full text-left px-5 py-4 rounded-2xl active:scale-[0.98] transition-transform"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    fontFamily: "var(--font-serif-sc)",
+                  }}
+                >
+                  <span className="text-[14px] block" style={{ color: "rgba(255,255,255,0.8)" }}>
+                    {s.title}
+                  </span>
+                  <span className="text-[11px] mt-1 block" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    {new Date(s.created_at).toLocaleDateString("zh-CN")} · {s.status === "active" ? "进行中" : "已结束"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  /* ─── Main Chat View ─── */
+
+  return (
+    <div className="fixed inset-0 overflow-hidden" style={{ background: "#0d0c15", color: "white" }}>
+      <BedroomBg />
+
+      {/* Sidebar */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60]"
+              style={{ background: "rgba(0,0,0,0.5)" }}
+              onClick={() => setSidebarOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed top-0 left-0 bottom-0 z-[70] w-[280px] overflow-y-auto"
+              style={{
+                background: "rgba(20,13,26,0.95)",
+                backdropFilter: "blur(40px)",
+                borderRight: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div className="p-5 pt-8">
+                <button
+                  onClick={() => { setSidebarOpen(false); createNewSession(); }}
+                  className="w-full py-3 rounded-xl mb-6 active:scale-95 transition-transform text-[14px]"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    color: "white",
+                    fontFamily: "var(--font-serif-sc)",
+                  }}
+                >
+                  + 新对话
+                </button>
+                <div className="space-y-2">
+                  {sessions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => openSession(s.id)}
+                      className="w-full text-left px-4 py-3 rounded-xl transition-colors"
+                      style={{
+                        background: s.id === activeSessionId ? "rgba(255,255,255,0.1)" : "transparent",
+                        fontFamily: "var(--font-serif-sc)",
+                      }}
+                    >
+                      <span className="text-[13px] block truncate" style={{ color: s.id === activeSessionId ? "white" : "rgba(255,255,255,0.6)" }}>
+                        {s.title}
+                      </span>
+                      <span className="text-[10px] block mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                        {new Date(s.created_at).toLocaleDateString("zh-CN")}
+                        {s.status === "active" && " · 进行中"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <header className="fixed top-0 w-full z-50 flex items-center justify-between px-4 h-14" style={{ backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-2">
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => setSidebarOpen(true)}>
+            <span className="material-symbols-outlined text-[22px]">menu</span>
+          </button>
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => router.push("/bedroom")}>
+            <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+          </button>
+        </div>
+
+        <span className="text-[14px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)" }}>
+          {activeSession?.presets?.scene || "亲密聊天"}
+        </span>
+
+        <div className="flex items-center gap-1">
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => setShowPresets(true)}>
+            <span className="material-symbols-outlined text-[22px]">tune</span>
+          </button>
+          {activeSession?.status === "active" && (
+            <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => setShowEndDialog(true)}>
+              <span className="material-symbols-outlined text-[22px]">stop_circle</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Messages */}
+      <main ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto pt-16 pb-36 px-5 max-w-[800px] mx-auto">
+        <div className="flex flex-col gap-3">
+          {messages.map((m, idx) => {
+            const showTime = shouldShowTime(messages, idx);
+            return (
+              <div key={m.ts}>
+                {showTime && <DarkTimeStamp ts={m.ts} />}
+                {m.role === "memory" && m.memories ? (
+                  <DarkMemoryTag memories={m.memories} />
+                ) : m.role === "fav-notify" ? (
+                  <DarkFavNotify text={m.content} />
+                ) : (
+                  <DarkBubble
+                    role={m.role}
+                    content={m.content}
+                    selected={selectedTs === m.ts}
+                    onSelect={m.role === "user" && !sending ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts) : undefined}
+                    onEditResend={() => editResend(m.ts)}
+                    onRetry={() => retryFrom(m.ts)}
+                    onFavorite={m.role === "assistant" ? () => favoriteChat(m.content, m.ts) : undefined}
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {sending && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 py-2">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)", animation: "pulse-orb 2s infinite alternate" }}>
+                <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(230,190,210,0.8)", fontVariationSettings: "'FILL' 1" }}>favorite</span>
+              </div>
+              <span className="text-[12px] italic" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-serif-sc)" }}>正在思考...</span>
+            </motion.div>
+          )}
+
+          {!ready && (
+            <div className="rounded-xl p-4 text-[13px]" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)" }}>
+              还没接上他的大脑～到设置里填好中转站、API Key 和对话模型。
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl p-4 text-[13px]" style={{ background: "rgba(200,100,100,0.1)", border: "1px solid rgba(200,100,100,0.2)", color: "#d4a5a5" }}>
+              {error}
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+      </main>
+
+      {/* Favorite Toast */}
+      <AnimatePresence>
+        {favToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed left-1/2 -translate-x-1/2 bottom-40 z-50 px-5 py-2.5 rounded-full"
+            style={{ background: "rgba(230,190,210,0.3)", backdropFilter: "blur(12px)", color: "white", fontFamily: "var(--font-serif-sc)", fontSize: "13px" }}
+          >
+            ⭐ 已收藏
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Scroll to bottom */}
+      <AnimatePresence>
+        {!atBottom && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed right-6 bottom-32 z-40 w-10 h-10 rounded-full flex items-center justify-center active:scale-90"
+            style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+          >
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "rgba(255,255,255,0.5)" }}>arrow_downward</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Input */}
+      <div className="fixed bottom-0 left-0 w-full z-50">
+        <div className="flex justify-center mb-2">
+          <DarkModeSwitcher mode={mode} setMode={setMode} />
+        </div>
+        <div className="px-5 pt-3 pb-8 flex items-center gap-3" style={{ background: "rgba(13,12,21,0.8)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex-1 relative">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              rows={1}
+              placeholder={ready ? "想跟他说什么……" : "先去设置接上他的大脑"}
+              disabled={!ready || sending || activeSession?.status === "ended"}
+              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[15px] resize-none disabled:opacity-40"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                color: "rgba(255,255,255,0.9)",
+                maxHeight: "120px",
+                lineHeight: "24px",
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: "24px",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={send}
+            disabled={!ready || sending || !input.trim() || activeSession?.status === "ended"}
+            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full active:scale-95 transition-transform disabled:opacity-30"
+            style={{ background: "rgba(230,190,210,0.2)", border: "1px solid rgba(230,190,210,0.3)" }}
+          >
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "rgba(255,255,255,0.8)" }}>send</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Preset Modal */}
+      <AnimatePresence>
+        {showPresets && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setShowPresets(false)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[400px] rounded-3xl p-6 space-y-5"
+              style={{ background: "rgba(30,22,40,0.95)", backdropFilter: "blur(40px)", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <h3 className="text-[18px] text-center" style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}>预设设定</h3>
+
+              <div>
+                <label className="text-[12px] block mb-2" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-serif-sc)" }}>场景</label>
+                <input
+                  value={presetScene}
+                  onChange={(e) => setPresetScene(e.target.value)}
+                  placeholder="比如：深夜卧室、雨天的旅馆、樱花树下..."
+                  className="w-full px-4 py-3 rounded-xl text-[14px] focus:outline-none"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "white", fontFamily: "var(--font-serif-sc)" }}
+                />
+              </div>
+
+              <div>
+                <label className="text-[12px] block mb-2" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-serif-sc)" }}>语言风格</label>
+                <div className="flex flex-wrap gap-2">
+                  {["温柔低语", "大胆直接", "诗意", "日常"].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setPresetStyle(presetStyle === s ? "" : s)}
+                      className="px-4 py-2 rounded-full text-[13px] transition-all active:scale-95"
+                      style={{
+                        background: presetStyle === s ? "rgba(230,190,210,0.25)" : "rgba(255,255,255,0.05)",
+                        border: `1px solid ${presetStyle === s ? "rgba(230,190,210,0.4)" : "rgba(255,255,255,0.08)"}`,
+                        color: presetStyle === s ? "rgba(230,190,210,0.9)" : "rgba(255,255,255,0.5)",
+                        fontFamily: "var(--font-serif-sc)",
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[12px] block mb-2" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-serif-sc)" }}>补充指令</label>
+                <textarea
+                  value={presetExtra}
+                  onChange={(e) => setPresetExtra(e.target.value)}
+                  placeholder="想让他怎么表现都可以写在这里..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl text-[14px] resize-none focus:outline-none"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "white", fontFamily: "var(--font-serif-sc)" }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowPresets(false)} className="flex-1 py-3 rounded-xl text-[14px] active:scale-95" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-serif-sc)" }}>
+                  取消
+                </button>
+                <button onClick={savePresets} className="flex-1 py-3 rounded-xl text-[14px] active:scale-95" style={{ background: "rgba(230,190,210,0.2)", border: "1px solid rgba(230,190,210,0.3)", color: "white", fontFamily: "var(--font-serif-sc)" }}>
+                  保存
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* End Session Dialog */}
+      <AnimatePresence>
+        {showEndDialog && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end justify-center" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setShowEndDialog(false)}>
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[500px] rounded-t-3xl p-6 pb-10 space-y-3"
+              style={{ background: "rgba(30,22,40,0.97)", backdropFilter: "blur(40px)", borderTop: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <h3 className="text-[16px] text-center mb-4" style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}>结束这次对话</h3>
+
+              <button onClick={() => endSession("diary")} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl active:scale-[0.98] transition-transform" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span className="material-symbols-outlined text-[22px]" style={{ color: "rgba(230,190,210,0.7)", fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
+                <div className="text-left">
+                  <span className="text-[14px] block" style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}>让他写日记</span>
+                  <span className="text-[11px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-serif-sc)" }}>他会把这次的感受写成日记</span>
+                </div>
+              </button>
+
+              <button onClick={() => endSession("memory")} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl active:scale-[0.98] transition-transform" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span className="material-symbols-outlined text-[22px]" style={{ color: "rgba(230,190,210,0.7)", fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+                <div className="text-left">
+                  <span className="text-[14px] block" style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}>存入记忆</span>
+                  <span className="text-[11px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-serif-sc)" }}>他会记住这次对话中重要的事</span>
+                </div>
+              </button>
+
+              <button onClick={() => endSession("close")} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl active:scale-[0.98] transition-transform" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span className="material-symbols-outlined text-[22px]" style={{ color: "rgba(255,255,255,0.3)" }}>close</span>
+                <div className="text-left">
+                  <span className="text-[14px] block" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.6)" }}>直接结束</span>
+                  <span className="text-[11px] block mt-0.5" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-serif-sc)" }}>不留痕迹地离开</span>
+                </div>
+              </button>
+
+              <button onClick={() => setShowEndDialog(false)} className="w-full py-3 mt-2 text-[13px]" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-serif-sc)" }}>
+                取消
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════
+   Sub-components (dark theme)
+   ════════════════════════════════════════ */
+
+function BedroomBg() {
+  return (
+    <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #181124 0%, #2a1b38 40%, #1f142b 70%, #0d0812 100%)" }} />
+      <div className="absolute rounded-full" style={{ top: "-5%", right: "5%", width: "55%", height: "55%", background: "#4f316e", filter: "blur(100px)", opacity: 0.25 }} />
+      <div className="absolute rounded-full" style={{ bottom: "-10%", left: "5%", width: "60%", height: "60%", background: "#2a1b3d", filter: "blur(100px)", opacity: 0.25 }} />
+    </div>
+  );
+}
+
+function DarkBubble({
+  role, content, selected, onSelect, onEditResend, onRetry, onFavorite,
+}: {
+  role: ChatMessage["role"]; content: string; selected?: boolean;
+  onSelect?: () => void; onEditResend?: () => void; onRetry?: () => void; onFavorite?: () => void;
+}) {
+  if (role === "user") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-end gap-2">
+        <div
+          onClick={onSelect}
+          className="rounded-[20px] rounded-br-[4px] px-4 py-3 max-w-[80%] whitespace-pre-wrap"
+          style={{
+            fontFamily: "var(--font-serif-sc)", fontSize: "14.5px", lineHeight: "24px",
+            background: "rgba(255,255,255,0.08)", border: selected ? "1px solid rgba(230,190,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
+            color: "rgba(255,255,255,0.9)", cursor: onSelect ? "pointer" : "default",
+          }}
+        >
+          {content}
+        </div>
+        {selected && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex gap-1.5">
+            <DarkPill onClick={onEditResend}>✎ 编辑重发</DarkPill>
+            <DarkPill onClick={onRetry}>↻ 重新回复</DarkPill>
+          </motion.div>
+        )}
+      </motion.div>
+    );
+  }
+
+  if (role === "inner") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-start">
+        <details className="w-full max-w-[85%] group" open>
+          <summary className="flex items-center gap-1.5 px-1 cursor-pointer list-none italic select-none">
+            <span className="material-symbols-outlined text-[12px]" style={{ color: "rgba(230,190,210,0.5)" }}>chat_bubble</span>
+            <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-serif-sc)" }}>心声</span>
+            <span className="material-symbols-outlined text-[12px] transition-transform group-open:rotate-180" style={{ color: "rgba(255,255,255,0.2)" }}>expand_more</span>
+          </summary>
+          <div className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", lineHeight: "1.6", fontSize: "12.5px" }}>
+            {content}
+          </div>
+        </details>
+      </motion.div>
+    );
+  }
+
+  // assistant
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handlePointerDown = () => { if (!onFavorite) return; longPressRef.current = setTimeout(() => setShowFavMenu(true), 500); };
+  const handlePointerUp = () => { if (longPressRef.current) clearTimeout(longPressRef.current); };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-start gap-2">
+      <div
+        className="rounded-[20px] rounded-bl-[4px] px-4 py-3 max-w-[80%] whitespace-pre-wrap select-none"
+        style={{
+          fontFamily: "var(--font-serif-sc)", fontSize: "14.5px", lineHeight: "24px",
+          background: "rgba(230,190,210,0.06)", backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.85)",
+          cursor: onFavorite ? "pointer" : "default",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onContextMenu={(e) => { if (onFavorite) { e.preventDefault(); setShowFavMenu(true); } }}
+      >
+        {content}
+      </div>
+      <AnimatePresence>
+        {showFavMenu && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+            <DarkPill onClick={() => { setShowFavMenu(false); onFavorite?.(); }}>⭐ 收藏这句话</DarkPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function DarkPill({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-3 py-1.5 text-[12px] rounded-lg active:scale-95"
+      style={{
+        background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+        color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-serif-sc)", cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  fact: "事实", event: "事件", emotion: "情绪", promise: "约定",
+  preference: "喜好", habit: "习惯", relationship: "关系", profile: "档案",
+};
+
+function DarkMemoryTag({ memories }: { memories: SavedMemoryInfo[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-start">
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95" style={{ background: "rgba(230,190,210,0.1)", border: "1px solid rgba(230,190,210,0.2)", fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "rgba(230,190,210,0.7)" }}>
+        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+        存入记忆
+        <span className="material-symbols-outlined text-[12px] transition-transform" style={{ transform: open ? "rotate(90deg)" : "none" }}>chevron_right</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden w-full max-w-[85%]">
+            <div className="mt-2 rounded-xl p-3 flex flex-col gap-2" style={{ background: "rgba(230,190,210,0.05)", border: "1px solid rgba(230,190,210,0.1)" }}>
+              {memories.map((m, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(230,190,210,0.15)", color: "rgba(230,190,210,0.7)", fontFamily: "var(--font-serif-sc)" }}>
+                      {TYPE_LABELS[m.type] || m.type}
+                    </span>
+                    {m.is_anchor && <span className="text-[10px]" style={{ color: "rgba(230,190,210,0.6)" }}>⚓</span>}
+                  </div>
+                  <p className="text-[13px] leading-relaxed" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}>{m.content}</p>
+                  {i < memories.length - 1 && <div className="h-px my-1" style={{ background: "rgba(230,190,210,0.08)" }} />}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function DarkFavNotify({ text }: { text: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
+      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl" style={{ background: "rgba(230,190,210,0.08)", border: "1px solid rgba(230,190,210,0.15)", fontFamily: "var(--font-serif-sc)", fontSize: "13px", color: "rgba(230,190,210,0.7)" }}>
+        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+        {text}
+        <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>⭐</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function DarkModeSwitcher({ mode, setMode }: { mode: ChatMode; setMode: (m: ChatMode) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button className="w-8 h-8 flex items-center justify-center rounded-full active:scale-90" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} onClick={() => setOpen(!open)}>
+        <span className="material-symbols-outlined text-[20px] transition-transform" style={{ color: "rgba(255,255,255,0.3)", transform: open ? "rotate(180deg)" : "none" }}>expand_less</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-2 p-2 rounded-xl" style={{ background: "rgba(30,22,40,0.95)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <button className="px-4 py-2 rounded-lg text-[14px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.8)", background: mode === "sentences" ? "rgba(255,255,255,0.1)" : "transparent" }} onClick={() => { setMode("sentences"); setOpen(false); }}>分句</button>
+            <div className="w-px h-6 bg-white/10" />
+            <button className="px-4 py-2 rounded-lg text-[14px]" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.8)", background: mode === "passage" ? "rgba(255,255,255,0.1)" : "transparent" }} onClick={() => { setMode("passage"); setOpen(false); }}>整段</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Helpers ─── */
+
+const FIVE_MINUTES = 5 * 60 * 1000;
+
+function shouldShowTime(messages: ChatMessage[], index: number): boolean {
+  if (index === 0) return true;
+  return messages[index].ts - messages[index - 1].ts > FIVE_MINUTES;
+}
+
+function DarkTimeStamp({ ts }: { ts: number }) {
+  const d = new Date(ts);
+  const now = new Date();
+  const tokyoOffset = 9 * 60;
+  const localOffset = d.getTimezoneOffset();
+  const tokyoDate = new Date(d.getTime() + (localOffset + tokyoOffset) * 60000);
+  const tokyoNow = new Date(now.getTime() + (now.getTimezoneOffset() + tokyoOffset) * 60000);
+  const hour = tokyoDate.getHours().toString().padStart(2, "0");
+  const min = tokyoDate.getMinutes().toString().padStart(2, "0");
+  const time = `${hour}:${min}`;
+  const isToday = tokyoDate.getFullYear() === tokyoNow.getFullYear() && tokyoDate.getMonth() === tokyoNow.getMonth() && tokyoDate.getDate() === tokyoNow.getDate();
+  const yesterday = new Date(tokyoNow); yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = tokyoDate.getFullYear() === yesterday.getFullYear() && tokyoDate.getMonth() === yesterday.getMonth() && tokyoDate.getDate() === yesterday.getDate();
+  const label = isToday ? time : isYesterday ? `昨天 ${time}` : `${tokyoDate.getMonth() + 1}/${tokyoDate.getDate()} ${time}`;
+
+  return (
+    <div className="flex justify-center py-2">
+      <span className="text-[11px] px-3 py-1 rounded-full" style={{ color: "rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.04)", fontFamily: "var(--font-serif-sc)" }}>{label}</span>
+    </div>
+  );
+}
