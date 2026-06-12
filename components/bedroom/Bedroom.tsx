@@ -15,15 +15,15 @@ function CrescentMoon() {
       {/* Breathing glow — z-5 so it sits BEHIND cards and bleeds through glass */}
       <div
         className="fixed pointer-events-none"
-        style={{ bottom: "8%", right: "4%", width: 100, height: 100, zIndex: 5 }}
+        style={{ top: "12%", right: "6%", width: 80, height: 80, zIndex: 5 }}
       >
         <div
           className="absolute"
           style={{
             top: "50%",
             left: "50%",
-            width: 350,
-            height: 350,
+            width: 280,
+            height: 280,
             transform: "translate(-50%, -50%)",
             background: "radial-gradient(circle, rgba(255,218,133,0.25) 0%, rgba(255,218,133,0.08) 35%, transparent 65%)",
             filter: "blur(30px)",
@@ -34,7 +34,7 @@ function CrescentMoon() {
       {/* Moon SVG — z-20 so it's visible above cards, crescent opens LEFT */}
       <div
         className="fixed pointer-events-none"
-        style={{ bottom: "8%", right: "4%", width: 100, height: 100, zIndex: 20 }}
+        style={{ top: "12%", right: "6%", width: 80, height: 80, zIndex: 20 }}
       >
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <defs>
@@ -125,10 +125,10 @@ function PulsatingOrbs() {
       <div
         className="orb absolute rounded-full"
         style={{
-          top: "-10%",
-          right: "-10%",
-          width: "60%",
-          height: "60%",
+          top: "-5%",
+          right: "5%",
+          width: "55%",
+          height: "55%",
           background: "#4f316e",
           filter: "blur(80px)",
           animation: "pulse-orb 8s infinite alternate",
@@ -137,10 +137,10 @@ function PulsatingOrbs() {
       <div
         className="orb absolute rounded-full"
         style={{
-          bottom: "-20%",
-          left: "-10%",
-          width: "70%",
-          height: "70%",
+          bottom: "-10%",
+          left: "5%",
+          width: "60%",
+          height: "60%",
           background: "#2a1b3d",
           filter: "blur(80px)",
           animation: "pulse-orb 8s infinite alternate",
@@ -251,7 +251,7 @@ export function Bedroom() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
+            className="rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
@@ -263,7 +263,7 @@ export function Bedroom() {
             onClick={() => router.push("/bedroom/intimate")}
           >
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-500 group-hover:shadow-[0_0_24px_rgba(123,84,85,0.4)]"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -284,17 +284,9 @@ export function Bedroom() {
             >
               和他做爱做的事
             </p>
-            <div className="mt-4 h-5 flex items-center">
-              <div className="flex space-x-2 group-hover:hidden transition-opacity">
-                <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: "#7b5455", animation: "pulse-orb 2s infinite alternate" }}
-                />
-                <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              </div>
+            <div className="mt-3 h-5 flex items-center">
               <span
-                className="text-xs italic hidden group-hover:inline-block transition-opacity"
+                className="text-xs italic"
                 style={{ color: "rgba(255,255,255,0.3)" }}
               >
                 &ldquo;过来，靠近我一点...&rdquo;
@@ -307,7 +299,7 @@ export function Bedroom() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
+            className="rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
@@ -319,7 +311,7 @@ export function Bedroom() {
             onClick={() => router.push("/bedroom/sleep")}
           >
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-500 group-hover:shadow-[0_0_24px_rgba(103,87,126,0.4)]"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -340,7 +332,7 @@ export function Bedroom() {
             >
               让他哄你睡觉
             </p>
-            <div className="mt-4 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+            <div className="mt-3 h-5 flex items-center justify-center">
               <span
                 className="text-xs italic"
                 style={{ color: "rgba(255,255,255,0.3)" }}
