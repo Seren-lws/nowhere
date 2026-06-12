@@ -13,22 +13,27 @@ function CrescentMoon() {
   return (
     <div
       className="absolute pointer-events-none"
-      style={{ bottom: "12%", right: "8%", width: 120, height: 120 }}
+      style={{ bottom: "15%", right: "6%", width: 100, height: 100, zIndex: 5 }}
     >
-      {/* Outer glow */}
+      {/* Breathing glow — z-index below cards so it bleeds through glass */}
       <div
-        className="absolute inset-0"
+        className="absolute"
         style={{
-          background: "radial-gradient(circle, rgba(255,218,133,0.15) 0%, transparent 70%)",
-          filter: "blur(40px)",
-          transform: "scale(3)",
+          top: "50%",
+          left: "50%",
+          width: 300,
+          height: 300,
+          transform: "translate(-50%, -50%)",
+          background: "radial-gradient(circle, rgba(255,218,133,0.2) 0%, rgba(255,218,133,0.05) 40%, transparent 70%)",
+          filter: "blur(30px)",
+          animation: "moon-breathe 6s infinite ease-in-out",
         }}
       />
-      {/* Moon SVG */}
-      <svg viewBox="0 0 100 100" className="w-full h-full relative z-10">
+      {/* Moon SVG — crescent opening faces LEFT */}
+      <svg viewBox="0 0 100 100" className="w-full h-full relative" style={{ zIndex: 6 }}>
         <defs>
           <filter id="moon-glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           <linearGradient id="moon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -37,17 +42,13 @@ function CrescentMoon() {
             <stop offset="100%" stopColor="#f0c050" />
           </linearGradient>
         </defs>
-        {/* Crescent: full circle minus an offset circle */}
-        <clipPath id="crescent-clip">
-          <rect width="100" height="100" />
-        </clipPath>
         <mask id="crescent-mask">
           <rect width="100" height="100" fill="black" />
-          <circle cx="50" cy="50" r="30" fill="white" />
-          <circle cx="62" cy="42" r="26" fill="black" />
+          <circle cx="50" cy="50" r="28" fill="white" />
+          <circle cx="38" cy="44" r="24" fill="black" />
         </mask>
         <circle
-          cx="50" cy="50" r="30"
+          cx="50" cy="50" r="28"
           fill="url(#moon-grad)"
           mask="url(#crescent-mask)"
           filter="url(#moon-glow)"
@@ -165,7 +166,7 @@ export function Bedroom() {
   const router = useRouter();
 
   return (
-    <div className="fixed inset-0 overflow-y-auto" style={{ background: "#0d0c15", color: "white" }}>
+    <div className="fixed inset-0 overflow-hidden" style={{ background: "#0d0c15", color: "white" }}>
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div
@@ -211,23 +212,23 @@ export function Bedroom() {
         </button>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-5 pt-24 pb-32 max-w-[800px] mx-auto">
+      {/* Main Content — single screen, no scroll */}
+      <main className="relative z-10 flex flex-col items-center justify-center h-screen px-5 pt-16 pb-8 max-w-[800px] mx-auto">
         {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-12"
+          className="text-center mb-6"
         >
           <span
-            className="text-[48px]"
+            className="text-[32px]"
             style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.9)" }}
           >
             卧室
           </span>
           <p
-            className="text-[14px] tracking-[0.2em] mt-2"
+            className="text-[12px] tracking-[0.2em] mt-1"
             style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.4)" }}
           >
             PRIVATE SANCTUARY
@@ -235,13 +236,13 @@ export function Bedroom() {
         </motion.div>
 
         {/* Cards */}
-        <div className="w-full space-y-6">
+        <div className="w-full space-y-4">
           {/* 亲密聊天 */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-[40px] p-10 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
+            className="rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
@@ -252,34 +253,34 @@ export function Bedroom() {
             onClick={() => router.push("/bedroom/intimate")}
           >
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-colors"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 boxShadow: "inset 0 4px 10px rgba(255,255,255,0.1)",
               }}
             >
-              <span className="text-4xl">🌙</span>
+              <span className="text-2xl">🌙</span>
             </div>
             <h2
-              className="text-2xl mb-2"
+              className="text-lg mb-1"
               style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}
             >
               亲密聊天
             </h2>
             <p
-              className="text-base"
+              className="text-sm"
               style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)" }}
             >
               和他做爱做的事
             </p>
-            <div className="mt-8 flex space-x-2">
+            <div className="mt-4 flex space-x-2">
               <div
-                className="w-2 h-2 rounded-full"
+                className="w-1.5 h-1.5 rounded-full"
                 style={{ background: "#7b5455", animation: "pulse-orb 2s infinite alternate" }}
               />
-              <div className="w-2 h-2 rounded-full bg-white/20" />
-              <div className="w-2 h-2 rounded-full bg-white/20" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
             </div>
           </motion.div>
 
@@ -288,7 +289,7 @@ export function Bedroom() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[40px] p-10 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
+            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
@@ -299,28 +300,28 @@ export function Bedroom() {
             onClick={() => router.push("/bedroom/sleep")}
           >
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-colors"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 boxShadow: "inset 0 4px 10px rgba(255,255,255,0.1)",
               }}
             >
-              <span className="text-4xl">😴</span>
+              <span className="text-2xl">😴</span>
             </div>
             <h2
-              className="text-2xl mb-2"
+              className="text-lg mb-1"
               style={{ fontFamily: "var(--font-serif-sc)", color: "white" }}
             >
               睡眠陪伴
             </h2>
             <p
-              className="text-base"
+              className="text-sm"
               style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)" }}
             >
               让他哄你睡觉
             </p>
-            <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <span
                 className="text-xs italic"
                 style={{ color: "rgba(255,255,255,0.3)" }}
@@ -345,6 +346,10 @@ export function Bedroom() {
         @keyframes twinkle {
           0%, 100% { opacity: 0.05; }
           50% { opacity: 0.4; }
+        }
+        @keyframes moon-breathe {
+          0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+          50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.3); }
         }
       `}</style>
     </div>
