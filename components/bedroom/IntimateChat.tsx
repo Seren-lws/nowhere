@@ -791,59 +791,62 @@ export function IntimateChat() {
 function BedroomBg() {
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #181124 0%, #2a1b38 40%, #1f142b 70%, #0d0812 100%)" }} />
-      {/* Flowing glow orbs */}
+      <div className="absolute inset-0" style={{ background: "#0d0812" }} />
+      {/* KTV-style flowing glow — centered, vivid, overlapping */}
       <div
         className="absolute rounded-full"
         style={{
-          top: "-15%", left: "-10%", width: "70%", height: "70%",
-          background: "radial-gradient(circle, #d4a5d4 0%, transparent 70%)",
-          filter: "blur(100px)", opacity: 0.3, mixBlendMode: "screen",
-          animation: "intimate-glow-1 12s ease-in-out infinite alternate",
+          top: "5%", left: "10%", width: "80vw", height: "80vw", maxWidth: "500px", maxHeight: "500px",
+          background: "radial-gradient(circle, #c965d6 0%, #9b3aaf 30%, transparent 70%)",
+          filter: "blur(80px)", opacity: 0.6, mixBlendMode: "screen",
+          animation: "intimate-glow-1 10s ease-in-out infinite alternate",
         }}
       />
       <div
         className="absolute rounded-full"
         style={{
-          top: "30%", right: "-20%", width: "65%", height: "65%",
-          background: "radial-gradient(circle, #ffb7b2 0%, transparent 70%)",
-          filter: "blur(120px)", opacity: 0.25, mixBlendMode: "screen",
-          animation: "intimate-glow-2 15s ease-in-out infinite alternate",
+          top: "25%", right: "5%", width: "75vw", height: "75vw", maxWidth: "480px", maxHeight: "480px",
+          background: "radial-gradient(circle, #ff8fa0 0%, #e85d75 30%, transparent 70%)",
+          filter: "blur(90px)", opacity: 0.5, mixBlendMode: "screen",
+          animation: "intimate-glow-2 13s ease-in-out infinite alternate",
         }}
       />
       <div
         className="absolute rounded-full"
         style={{
-          bottom: "-10%", left: "20%", width: "60%", height: "60%",
-          background: "radial-gradient(circle, #8c6b9d 0%, transparent 70%)",
-          filter: "blur(100px)", opacity: 0.3, mixBlendMode: "screen",
-          animation: "intimate-glow-3 18s ease-in-out infinite alternate",
+          bottom: "10%", left: "15%", width: "70vw", height: "70vw", maxWidth: "450px", maxHeight: "450px",
+          background: "radial-gradient(circle, #7b5ea7 0%, #5c3d8f 30%, transparent 70%)",
+          filter: "blur(80px)", opacity: 0.55, mixBlendMode: "screen",
+          animation: "intimate-glow-3 16s ease-in-out infinite alternate",
         }}
       />
       <div
         className="absolute rounded-full"
         style={{
-          top: "50%", left: "40%", width: "50%", height: "50%",
-          background: "radial-gradient(circle, #e6bed2 0%, transparent 65%)",
-          filter: "blur(130px)", opacity: 0.15, mixBlendMode: "screen",
-          animation: "intimate-glow-1 20s ease-in-out infinite alternate-reverse",
+          top: "45%", left: "25%", width: "60vw", height: "60vw", maxWidth: "400px", maxHeight: "400px",
+          background: "radial-gradient(circle, #ff9ec4 0%, #e86ba0 30%, transparent 70%)",
+          filter: "blur(100px)", opacity: 0.4, mixBlendMode: "screen",
+          animation: "intimate-glow-2 18s ease-in-out infinite alternate-reverse",
         }}
       />
       <style jsx global>{`
         @keyframes intimate-glow-1 {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-          50% { transform: translate(8%, -6%) scale(1.15); opacity: 0.35; }
-          100% { transform: translate(-5%, 8%) scale(1.05); opacity: 0.25; }
+          0% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(15%, 10%) scale(1.2); }
+          66% { transform: translate(-10%, 15%) scale(0.9); }
+          100% { transform: translate(5%, -10%) scale(1.15); }
         }
         @keyframes intimate-glow-2 {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.15; }
-          50% { transform: translate(-10%, 5%) scale(1.2); opacity: 0.3; }
-          100% { transform: translate(5%, -8%) scale(0.95); opacity: 0.2; }
+          0% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(-12%, -8%) scale(1.15); }
+          66% { transform: translate(10%, 12%) scale(1.05); }
+          100% { transform: translate(-8%, 5%) scale(1.2); }
         }
         @keyframes intimate-glow-3 {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-          50% { transform: translate(6%, 6%) scale(1.25); opacity: 0.35; }
-          100% { transform: translate(-8%, -4%) scale(1.1); opacity: 0.25; }
+          0% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(8%, -12%) scale(1.1); }
+          66% { transform: translate(-15%, 8%) scale(1.2); }
+          100% { transform: translate(10%, 10%) scale(0.95); }
         }
       `}</style>
     </div>
