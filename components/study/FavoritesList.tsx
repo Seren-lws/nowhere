@@ -29,7 +29,7 @@ export function FavoritesList() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const url = filter === "all" ? "/api/favorites" : `/api/favorites?source=${filter}`;
+      const url = filter === "all" ? "/api/favorites?owner=user" : `/api/favorites?owner=user&source=${filter}`;
       const res = await fetch(url);
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);

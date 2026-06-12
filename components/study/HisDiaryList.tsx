@@ -218,6 +218,7 @@ function DiaryCard({ entry, index, onFavToast }: { entry: DiaryEntry; index: num
           body: JSON.stringify({
             source: "diary",
             content: entry.content,
+            owner: "user",
             metadata: { diary_id: entry.id, date: entry.created_at },
           }),
         });

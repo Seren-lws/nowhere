@@ -8,9 +8,15 @@ export interface SavedMemoryInfo {
   is_anchor?: boolean;
 }
 
+export interface SavedFavoriteInfo {
+  content: string;
+  source: string;
+}
+
 export interface ChatResponse {
   content: string;
   savedMemories?: SavedMemoryInfo[];
+  savedFavorites?: SavedFavoriteInfo[];
 }
 
 export async function sendChat(

@@ -9,6 +9,7 @@ import {
   DEFAULT_NAME,
   FIRST_GREETING,
   SAVE_MEMORY_TOOL,
+  SAVE_FAVORITE_TOOL,
   WRITE_DIARY_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
   parseReply,
@@ -193,7 +194,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, WRITE_DIARY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -203,6 +204,13 @@ export function LivingRoom() {
       if (resp.savedMemories && resp.savedMemories.length > 0) {
         await delay(150);
         acc.push({ role: "memory", content: "", ts: t++, memories: resp.savedMemories });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
+      if (resp.savedFavorites && resp.savedFavorites.length > 0) {
+        await delay(150);
+        acc.push({ role: "fav-notify", content: resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话", ts: t++ });
         setMessages([...acc]);
         saveHistory(acc);
       }
@@ -278,6 +286,7 @@ export function LivingRoom() {
         body: JSON.stringify({
           source: "chat",
           content: text,
+          owner: "user",
           metadata: { date: dateStr, room: "living-room" },
         }),
       });
@@ -411,6 +420,8 @@ export function LivingRoom() {
                   <MemoryTag memories={m.memories} />
                 ) : m.role === "diary-notify" ? (
                   <DiaryNotifyCard diaryId={m.content} />
+                ) : m.role === "fav-notify" ? (
+                  <FavNotifyCard text={m.content} />
                 ) : m.diaryShare ? (
                   <DiaryShareCard diary={m.diaryShare} />
                 ) : (
@@ -1134,6 +1145,37 @@ function TimeStamp({ ts }: { ts: number }) {
 }
 
 /* ─── Diary Notify Card ─── */
+
+function FavNotifyCard({ text }: { text: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-center"
+    >
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+        style={{
+          background: "rgba(212,165,165,0.12)",
+          border: "1px solid rgba(212,165,165,0.2)",
+          fontFamily: "var(--font-serif-sc)",
+          fontSize: "13px",
+          color: "var(--primary)",
+        }}
+      >
+        <span
+          className="material-symbols-outlined text-[16px]"
+          style={{ fontVariationSettings: "'FILL' 1" }}
+        >
+          bookmark
+        </span>
+        {text}
+        <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>⭐</span>
+      </div>
+    </motion.div>
+  );
+}
 
 function DiaryNotifyCard({ diaryId }: { diaryId: string }) {
   const router = useRouter();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveMemoryItem } from "@/lib/brain/db";
 import { createDiary, getLastChatTime } from "@/lib/brain/diary";
+import { addFavorite } from "@/lib/brain/favorites";
 import { supabase } from "@/lib/supabase";
 
 interface SavedMemory {
@@ -8,6 +9,11 @@ interface SavedMemory {
   type: string;
   tags?: string[];
   is_anchor?: boolean;
+}
+
+interface SavedFavorite {
+  content: string;
+  source: string;
 }
 
 interface ChatRequest {
@@ -39,6 +45,7 @@ export async function POST(req: Request) {
   let currentMessages = [...messages];
   const maxToolRounds = 5;
   const savedMemories: SavedMemory[] = [];
+  const savedFavorites: SavedFavorite[] = [];
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -144,6 +151,32 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "save_favorite") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const now = new Date();
+            const tokyoDate = now.toLocaleString("ja-JP", {
+              timeZone: "Asia/Tokyo",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            });
+            await addFavorite({
+              source: args.source ?? "chat",
+              content: args.content,
+              owner: "companion",
+              metadata: { date: tokyoDate, room: "living-room" },
+            });
+            savedFavorites.push({
+              content: args.content,
+              source: args.source ?? "chat",
+            });
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         } else if (tc.function.name === "write_diary") {
           try {
             const args = JSON.parse(tc.function.arguments);
@@ -207,6 +240,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       content,
       ...(savedMemories.length > 0 ? { savedMemories } : {}),
+      ...(savedFavorites.length > 0 ? { savedFavorites } : {}),
     });
   }
 

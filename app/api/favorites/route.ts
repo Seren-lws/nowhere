@@ -5,14 +5,16 @@ import {
   removeFavorite,
   removeFavoriteByDiary,
   type FavoriteSource,
+  type FavoriteOwner,
 } from "@/lib/brain/favorites";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const source = searchParams.get("source") as FavoriteSource | null;
+  const owner = (searchParams.get("owner") ?? "user") as FavoriteOwner;
 
   try {
-    const favorites = await fetchFavorites(source ?? undefined);
+    const favorites = await fetchFavorites(owner, source ?? undefined);
     return NextResponse.json(favorites);
   } catch (e) {
     return NextResponse.json(
@@ -25,13 +27,13 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { source, content, metadata } = body;
+    const { source, content, metadata, owner } = body;
 
     if (!source || !content) {
       return NextResponse.json({ error: "缺少 source 或 content" }, { status: 400 });
     }
 
-    const id = await addFavorite({ source, content, metadata });
+    const id = await addFavorite({ source, content, owner, metadata });
     return NextResponse.json({ id });
   } catch (e) {
     return NextResponse.json(

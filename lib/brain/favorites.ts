@@ -1,11 +1,13 @@
 import { supabase } from "@/lib/supabase";
 
 export type FavoriteSource = "chat" | "diary" | "bedroom";
+export type FavoriteOwner = "user" | "companion";
 
 export interface FavoriteItem {
   id: string;
   source: FavoriteSource;
   content: string;
+  owner: FavoriteOwner;
   metadata: {
     date?: string;
     room?: string;
@@ -16,12 +18,14 @@ export interface FavoriteItem {
 }
 
 export async function fetchFavorites(
+  owner: FavoriteOwner = "user",
   source?: FavoriteSource,
   limit = 50,
 ): Promise<FavoriteItem[]> {
   let query = supabase
     .from("favorites")
     .select("*")
+    .eq("owner", owner)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -37,6 +41,7 @@ export async function fetchFavorites(
 export async function addFavorite(item: {
   source: FavoriteSource;
   content: string;
+  owner?: FavoriteOwner;
   metadata?: FavoriteItem["metadata"];
 }): Promise<string> {
   const { data, error } = await supabase
@@ -44,6 +49,7 @@ export async function addFavorite(item: {
     .insert({
       source: item.source,
       content: item.content,
+      owner: item.owner ?? "user",
       metadata: item.metadata ?? {},
     })
     .select("id")
