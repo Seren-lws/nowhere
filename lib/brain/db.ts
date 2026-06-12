@@ -103,6 +103,41 @@ export async function clearChatMessages(room = "living-room"): Promise<void> {
   if (error) throw new Error(`清空消息失败: ${error.message}`);
 }
 
+export async function decayMemories(factor = 0.95): Promise<number> {
+  const { data, error } = await supabase
+    .from("memory_items")
+    .select("id, temperature, decay_level")
+    .eq("is_anchor", false);
+  if (error || !data) return 0;
+
+  let cooled = 0;
+  for (const m of data) {
+    const temp = (m.temperature ?? 1.0) * factor;
+    const newDecay =
+      temp < 0.1 ? 5 :
+      temp < 0.2 ? 4 :
+      temp < 0.3 ? 3 :
+      temp < 0.5 ? 2 :
+      temp < 0.7 ? 1 : 0;
+    if (temp !== m.temperature || newDecay !== m.decay_level) {
+      await supabase
+        .from("memory_items")
+        .update({ temperature: Math.round(temp * 1000) / 1000, decay_level: newDecay })
+        .eq("id", m.id);
+      cooled++;
+    }
+  }
+  return cooled;
+}
+
+export async function warmUpMemories(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await supabase
+    .from("memory_items")
+    .update({ temperature: 1.0, decay_level: 0 })
+    .in("id", ids);
+}
+
 export async function fetchRecentAssistantMessages(
   room = "living-room",
   limit = 6,

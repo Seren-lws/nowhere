@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { decayMemories } from "./db";
 import type { MemoryItem } from "./db";
 
 interface GardenerConfig {
@@ -31,6 +32,7 @@ interface PatrolFindings {
 export interface PatrolResult {
   merged: number;
   conflicts: number;
+  cooled: number;
   summary: string;
 }
 
@@ -85,9 +87,11 @@ export async function runPatrol(config: GardenerConfig): Promise<PatrolResult> {
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`读取记忆失败: ${error.message}`);
+  const cooled = await decayMemories(0.95);
+
   if (!memories || memories.length < 2) {
-    await writeLog("patrol", "花园静悄悄", "记忆还太少，园丁轻轻走过，没有打扰。");
-    return { merged: 0, conflicts: 0, summary: "记忆还太少，园丁轻轻走过，没有打扰。" };
+    await writeLog("patrol", "花园静悄悄", "记忆还太少，园丁轻轻走过，没有打扰。", { cooled });
+    return { merged: 0, conflicts: 0, cooled, summary: "记忆还太少，园丁轻轻走过，没有打扰。" };
   }
 
   const memoryList = (memories as MemoryItem[])
@@ -171,9 +175,10 @@ export async function runPatrol(config: GardenerConfig): Promise<PatrolResult> {
     total_memories: memories.length,
     merged,
     conflicts,
+    cooled,
   });
 
-  return { merged, conflicts, summary };
+  return { merged, conflicts, cooled, summary };
 }
 
 export async function resolveConflict(

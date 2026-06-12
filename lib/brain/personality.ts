@@ -1,7 +1,7 @@
 import { fetchPersonalityLayers, fetchRecentAssistantMessages } from "./db";
 import type { PersonalityLayer } from "./db";
 import type { MemoryItem } from "./db";
-import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retrieveMemories } from "./retrieval";
+import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retrieveMemories, touchRetrievedMemories } from "./retrieval";
 
 export const DEFAULT_NAME = "某先生";
 
@@ -292,6 +292,8 @@ export async function buildMessages(
   const recentIds = new Set(recent.map((m) => m.id));
   const dedupedRelevant = nonAnchorRelevant.filter((m) => !recentIds.has(m.id));
   const memoryPrompt = memoriesToPrompt(nonProfileAnchors, dedupedRelevant, recent);
+
+  touchRetrievedMemories([...dedupedRelevant, ...recent]);
   const samplesPrompt = samplesToPrompt(samples);
 
   const now = new Date();
