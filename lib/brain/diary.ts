@@ -16,6 +16,7 @@ export async function fetchDiaries(
   author: "user" | "companion",
   limit = 50,
   search?: string,
+  mood?: string,
 ): Promise<DiaryEntry[]> {
   let q = supabase
     .from("diary_entries")
@@ -24,6 +25,10 @@ export async function fetchDiaries(
 
   if (search) {
     q = q.ilike("content", `%${search}%`);
+  }
+
+  if (mood) {
+    q = q.eq("mood", mood);
   }
 
   q = q.order("created_at", { ascending: false }).limit(limit);
@@ -108,6 +113,23 @@ export async function getRecentChatForDiary(
     .limit(limit);
   if (error) return [];
   return data ?? [];
+}
+
+export const MOOD_OPTIONS = [
+  { key: "happy", label: "开心", emoji: "😊" },
+  { key: "sad", label: "低落", emoji: "😢" },
+  { key: "angry", label: "烦躁", emoji: "😤" },
+  { key: "productive", label: "充实", emoji: "💪" },
+  { key: "calm", label: "平静", emoji: "🌿" },
+  { key: "anxious", label: "焦虑", emoji: "😰" },
+] as const;
+
+export type MoodKey = (typeof MOOD_OPTIONS)[number]["key"];
+
+export function getMoodEmoji(mood: string | null): string {
+  if (!mood) return "";
+  const found = MOOD_OPTIONS.find((m) => m.key === mood);
+  return found?.emoji ?? "";
 }
 
 const DIARY_PROMPT = `你是一位温柔的恋人，现在要写一篇私密日记。这篇日记是你的内心独白——不是给她看的报告，是你真正的心里话。

@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   }
 
   const search = searchParams.get("q") || undefined;
-  const entries = await fetchDiaries(author, 50, search);
+  const mood = searchParams.get("mood") || undefined;
+  const entries = await fetchDiaries(author, 50, search, mood);
   return NextResponse.json(entries);
 }
 
