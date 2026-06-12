@@ -12,6 +12,7 @@ import {
   SAVE_FAVORITE_TOOL,
   WRITE_DIARY_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
+  INVITE_BEDROOM_TOOL,
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
@@ -194,7 +195,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -230,6 +231,13 @@ export function LivingRoom() {
         setMessages([...acc]);
         saveHistory(acc);
         saveMessageToDb("assistant", p).then((dbId) => { asstMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+      }
+
+      if (resp.bedroomInvite) {
+        await delay(400);
+        acc.push({ role: "bedroom-invite", content: resp.bedroomInvite, ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
       }
     } catch (e) {
       setSending(false);
@@ -293,6 +301,12 @@ export function LivingRoom() {
       setFavToast(true);
       setTimeout(() => setFavToast(false), 1500);
     } catch {}
+  };
+
+  const goToBedroom = () => {
+    const recent = toContext(messages).slice(-6);
+    const ctx = encodeURIComponent(JSON.stringify(recent));
+    router.push(`/bedroom/intimate?from=livingroom&context=${ctx}`);
   };
 
   const clearChat = () => {
@@ -422,6 +436,8 @@ export function LivingRoom() {
                   <DiaryNotifyCard diaryId={m.content} />
                 ) : m.role === "fav-notify" ? (
                   <FavNotifyCard text={m.content} />
+                ) : m.role === "bedroom-invite" ? (
+                  <BedroomInviteCard message={m.content} onAccept={() => goToBedroom()} />
                 ) : m.diaryShare ? (
                   <DiaryShareCard diary={m.diaryShare} />
                 ) : (
@@ -1212,6 +1228,74 @@ function DiaryNotifyCard({ diaryId }: { diaryId: string }) {
           arrow_forward
         </span>
       </button>
+    </motion.div>
+  );
+}
+
+/* ─── Bedroom Invite Card ─── */
+
+function BedroomInviteCard({ message, onAccept }: { message: string; onAccept: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="flex justify-center my-2"
+    >
+      <div
+        className="w-full max-w-[85%] rounded-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, rgba(123,94,167,0.12), rgba(201,101,214,0.1), rgba(255,143,160,0.1))",
+          border: "1px solid rgba(201,101,214,0.2)",
+          boxShadow: "0 4px 24px rgba(123,94,167,0.1), inset 0 1px 0 rgba(255,255,255,0.3)",
+        }}
+      >
+        <div className="px-5 pt-4 pb-3 flex items-start gap-3">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+            style={{
+              background: "linear-gradient(135deg, rgba(201,101,214,0.2), rgba(255,143,160,0.2))",
+            }}
+          >
+            <span
+              className="material-symbols-outlined text-[20px]"
+              style={{ color: "#c965d6", fontVariationSettings: "'FILL' 1" }}
+            >
+              nightlight
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-[13px] italic whitespace-pre-wrap leading-relaxed"
+              style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+            >
+              {message}
+            </p>
+          </div>
+        </div>
+        <div className="px-5 pb-4 flex justify-end">
+          <button
+            onClick={onAccept}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-full transition-all active:scale-95"
+            style={{
+              background: "linear-gradient(135deg, #c965d6, #ff8fa0)",
+              color: "white",
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "13px",
+              fontWeight: 500,
+              boxShadow: "0 2px 12px rgba(201,101,214,0.3)",
+            }}
+          >
+            <span
+              className="material-symbols-outlined text-[16px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              favorite
+            </span>
+            去卧室
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

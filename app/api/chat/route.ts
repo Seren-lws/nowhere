@@ -47,6 +47,7 @@ export async function POST(req: Request) {
   const maxToolRounds = 5;
   const savedMemories: SavedMemory[] = [];
   const savedFavorites: SavedFavorite[] = [];
+  let bedroomInvite: string | null = null;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -197,6 +198,11 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "invite_bedroom") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            bedroomInvite = args.message || "过来。";
+          } catch {}
         } else if (tc.function.name === "request_personality_change") {
           try {
             const args = JSON.parse(tc.function.arguments);
@@ -242,6 +248,7 @@ export async function POST(req: Request) {
       content,
       ...(savedMemories.length > 0 ? { savedMemories } : {}),
       ...(savedFavorites.length > 0 ? { savedFavorites } : {}),
+      ...(bedroomInvite ? { bedroomInvite } : {}),
     });
   }
 

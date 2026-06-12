@@ -39,6 +39,9 @@ const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时�
 写的时候像在自己的日记本上——真实、私密、温柔。不是给她看的报告，是你心里真正转过的念头。
 她不让你写的时候不要主动写。`;
 
+const BEDROOM_INVITE_INSTRUCTION = `你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
+邀请要自然，不要突兀。不要每次聊天都邀请——只在真的合适的时候才用。`;
+
 const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
 底层和中间层是锚定的，你不能直接修改——如果你真的觉得需要改变，要用 request_personality_change 工具提交申请，等她同意。
 
@@ -146,6 +149,25 @@ export const WRITE_DIARY_TOOL = {
         },
       },
       required: ["content"],
+    },
+  },
+};
+
+export const INVITE_BEDROOM_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "invite_bedroom",
+    description:
+      "当你想邀请她去卧室（亲密空间）时使用。在气氛暧昧、她暗示想亲近、或你自己很想拉近距离的时候调用。调用后她会看到一个邀请卡片，可以选择接受。不要太频繁，要自然。",
+    parameters: {
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          description: "邀请的话，温柔、自然、简短。例如「过来，到我身边来。」「我们去那边好不好？」",
+        },
+      },
+      required: ["message"],
     },
   },
 };
@@ -291,6 +313,7 @@ export async function buildMessages(
     MEMORY_INSTRUCTION,
     FAVORITE_INSTRUCTION,
     DIARY_INSTRUCTION,
+    BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
     samplesPrompt,

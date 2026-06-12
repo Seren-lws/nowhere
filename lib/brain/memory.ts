@@ -2,7 +2,7 @@ import { saveChatMessage, loadChatMessages } from "./db";
 
 import type { SavedMemoryInfo } from "./client";
 
-export type ChatRole = "user" | "assistant" | "inner" | "memory" | "diary-notify" | "fav-notify";
+export type ChatRole = "user" | "assistant" | "inner" | "memory" | "diary-notify" | "fav-notify" | "bedroom-invite";
 
 export interface DiaryShareData {
   id: string;
@@ -25,7 +25,7 @@ export function toContext(
 ): { role: "user" | "assistant"; content: string }[] {
   const out: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of msgs) {
-    if (m.role === "inner" || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify") continue;
+    if (m.role === "inner" || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify" || m.role === "bedroom-invite") continue;
     const last = out[out.length - 1];
     if (last && last.role === m.role) {
       last.content += "\n" + m.content;
@@ -82,7 +82,7 @@ export async function migrateLocalToDb(): Promise<number> {
 
   let migrated = 0;
   for (const m of local) {
-    if (m.dbId || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify") continue;
+    if (m.dbId || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify" || m.role === "bedroom-invite") continue;
     try {
       await saveChatMessage(m.role, m.content);
       migrated++;
