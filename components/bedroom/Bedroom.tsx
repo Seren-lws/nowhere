@@ -11,51 +11,58 @@ function seededRandom(seed: number) {
 
 function CrescentMoon() {
   return (
-    <div
-      className="absolute pointer-events-none"
-      style={{ bottom: "15%", right: "6%", width: 100, height: 100, zIndex: 5 }}
-    >
-      {/* Breathing glow — z-index below cards so it bleeds through glass */}
+    <>
+      {/* Breathing glow — z-5 so it sits BEHIND cards and bleeds through glass */}
       <div
-        className="absolute"
-        style={{
-          top: "50%",
-          left: "50%",
-          width: 300,
-          height: 300,
-          transform: "translate(-50%, -50%)",
-          background: "radial-gradient(circle, rgba(255,218,133,0.2) 0%, rgba(255,218,133,0.05) 40%, transparent 70%)",
-          filter: "blur(30px)",
-          animation: "moon-breathe 6s infinite ease-in-out",
-        }}
-      />
-      {/* Moon SVG — crescent opening faces LEFT */}
-      <svg viewBox="0 0 100 100" className="w-full h-full relative" style={{ zIndex: 6 }}>
-        <defs>
-          <filter id="moon-glow">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-          <linearGradient id="moon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fff8e1" />
-            <stop offset="50%" stopColor="#ffda85" />
-            <stop offset="100%" stopColor="#f0c050" />
-          </linearGradient>
-        </defs>
-        <mask id="crescent-mask">
-          <rect width="100" height="100" fill="black" />
-          <circle cx="50" cy="50" r="28" fill="white" />
-          <circle cx="38" cy="44" r="24" fill="black" />
-        </mask>
-        <circle
-          cx="50" cy="50" r="28"
-          fill="url(#moon-grad)"
-          mask="url(#crescent-mask)"
-          filter="url(#moon-glow)"
-          opacity="0.9"
+        className="fixed pointer-events-none"
+        style={{ bottom: "8%", right: "4%", width: 100, height: 100, zIndex: 5 }}
+      >
+        <div
+          className="absolute"
+          style={{
+            top: "50%",
+            left: "50%",
+            width: 350,
+            height: 350,
+            transform: "translate(-50%, -50%)",
+            background: "radial-gradient(circle, rgba(255,218,133,0.25) 0%, rgba(255,218,133,0.08) 35%, transparent 65%)",
+            filter: "blur(30px)",
+            animation: "moon-breathe 6s infinite ease-in-out",
+          }}
         />
-      </svg>
-    </div>
+      </div>
+      {/* Moon SVG — z-20 so it's visible above cards, crescent opens LEFT */}
+      <div
+        className="fixed pointer-events-none"
+        style={{ bottom: "8%", right: "4%", width: 100, height: 100, zIndex: 20 }}
+      >
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <defs>
+            <filter id="moon-glow">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <linearGradient id="moon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fff8e1" />
+              <stop offset="50%" stopColor="#ffda85" />
+              <stop offset="100%" stopColor="#f0c050" />
+            </linearGradient>
+          </defs>
+          <mask id="crescent-mask">
+            <rect width="100" height="100" fill="black" />
+            <circle cx="50" cy="50" r="28" fill="white" />
+            <circle cx="38" cy="44" r="24" fill="black" />
+          </mask>
+          <circle
+            cx="50" cy="50" r="28"
+            fill="url(#moon-grad)"
+            mask="url(#crescent-mask)"
+            filter="url(#moon-glow)"
+            opacity="0.9"
+          />
+        </svg>
+      </div>
+    </>
   );
 }
 
@@ -179,8 +186,10 @@ export function Bedroom() {
         />
         <PulsatingOrbs />
         <StarField />
-        <CrescentMoon />
       </div>
+
+      {/* Moon — separate layer so glow bleeds through glass cards */}
+      <CrescentMoon />
 
       {/* Header */}
       <header
@@ -242,18 +251,19 @@ export function Bedroom() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
+            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
               WebkitBackdropFilter: "blur(60px)",
               border: "1px solid rgba(255,255,255,0.12)",
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              transition: "all 0.6s cubic-bezier(0.22,1,0.36,1)",
             }}
             onClick={() => router.push("/bedroom/intimate")}
           >
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-500 group-hover:shadow-[0_0_24px_rgba(123,84,85,0.4)]"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -274,13 +284,21 @@ export function Bedroom() {
             >
               和他做爱做的事
             </p>
-            <div className="mt-4 flex space-x-2">
-              <div
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: "#7b5455", animation: "pulse-orb 2s infinite alternate" }}
-              />
-              <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-              <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+            <div className="mt-4 h-5 flex items-center">
+              <div className="flex space-x-2 group-hover:hidden transition-opacity">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: "#7b5455", animation: "pulse-orb 2s infinite alternate" }}
+                />
+                <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+              </div>
+              <span
+                className="text-xs italic hidden group-hover:inline-block transition-opacity"
+                style={{ color: "rgba(255,255,255,0.3)" }}
+              >
+                &ldquo;过来，靠近我一点...&rdquo;
+              </span>
             </div>
           </motion.div>
 
@@ -289,18 +307,19 @@ export function Bedroom() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer transition-all duration-500 active:scale-95"
+            className="group rounded-[28px] px-6 py-7 flex flex-col items-center text-center cursor-pointer active:scale-95"
             style={{
               background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(60px)",
               WebkitBackdropFilter: "blur(60px)",
               border: "1px solid rgba(255,255,255,0.12)",
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              transition: "all 0.6s cubic-bezier(0.22,1,0.36,1)",
             }}
             onClick={() => router.push("/bedroom/sleep")}
           >
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors"
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-500 group-hover:shadow-[0_0_24px_rgba(103,87,126,0.4)]"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -321,7 +340,7 @@ export function Bedroom() {
             >
               让他哄你睡觉
             </p>
-            <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-4 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
               <span
                 className="text-xs italic"
                 style={{ color: "rgba(255,255,255,0.3)" }}
