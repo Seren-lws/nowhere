@@ -271,11 +271,11 @@ function CompanionBubble({ status }: { status: CompanionStatus }) {
   return (
     <div
       className="absolute z-[15] pointer-events-none flex flex-col items-center"
-      style={{ left: `${pos.left}%`, top: `${pos.top}%`, transform: "translate(-50%, -50%)" }}
+      style={{ left: `${pos.left}%`, top: `${pos.top}%`, transform: "translate(-50%, -100%)" }}
     >
       {/* Status text bubble */}
       <div
-        className="mb-2 px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap"
+        className="mb-1 px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap"
         style={{
           background: "rgba(255,255,255,0.75)",
           backdropFilter: "blur(10px)",
@@ -289,15 +289,17 @@ function CompanionBubble({ status }: { status: CompanionStatus }) {
       >
         {status.status_text}
       </div>
-      {/* Glowing orb */}
-      <div
-        className="rounded-full"
+      {/* Q版小人 */}
+      <img
+        src="/floorplan/companion.png"
+        alt="他"
+        className="drop-shadow-lg"
         style={{
-          width: 16,
-          height: 16,
-          background: "radial-gradient(circle, rgba(200,170,220,0.9) 0%, rgba(200,170,220,0.3) 60%, transparent 100%)",
-          boxShadow: "0 0 20px rgba(200,170,220,0.5), 0 0 40px rgba(200,170,220,0.2)",
-          animation: "heartbeat 2s ease-in-out infinite",
+          width: 64,
+          height: 64,
+          objectFit: "contain",
+          animation: "gentle-float 5s ease-in-out 1s infinite",
+          filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.1))",
         }}
       />
     </div>
