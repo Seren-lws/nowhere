@@ -108,7 +108,7 @@ export function SettingsForm() {
       className="min-h-[100dvh] w-full"
       style={{ background: "var(--bg-gradient)", color: "var(--text-deep)" }}
     >
-      <div className="mx-auto w-full max-w-md px-5 py-7">
+      <div className="mx-auto w-full max-w-md px-5 py-7 pb-24">
         <header className="mb-5 flex items-center justify-between px-1">
           <h1
             className="text-[19px] font-medium"
@@ -173,22 +173,6 @@ export function SettingsForm() {
           </div>
 
           <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onSave}
-              className="px-7 py-2.5 text-[13.5px] transition-all"
-              style={{
-                borderRadius: 14,
-                border: "none",
-                background: "linear-gradient(135deg, var(--blush) 0%, var(--accent-wisteria) 100%)",
-                color: "rgba(255,255,255,.95)",
-                letterSpacing: "2px",
-                boxShadow: "0 2px 10px rgba(196,160,170,.2)",
-                cursor: "pointer",
-              }}
-            >
-              {saved ? "已保存" : "保存"}
-            </button>
             <button
               type="button"
               onClick={onTest}
@@ -403,6 +387,33 @@ export function SettingsForm() {
             </p>
           )}
         </GlassCard>
+      </div>
+
+      {/* 固定底部保存按钮 */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center py-4 px-5"
+        style={{
+          background: "linear-gradient(to top, rgba(252,247,242,0.95) 60%, rgba(252,247,242,0) 100%)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onSave}
+          className="w-full max-w-md px-7 py-3 text-[14px] transition-all active:scale-[0.97]"
+          style={{
+            borderRadius: 16,
+            border: "none",
+            background: "linear-gradient(135deg, var(--blush) 0%, var(--accent-wisteria) 100%)",
+            color: "rgba(255,255,255,.95)",
+            letterSpacing: "2.5px",
+            boxShadow: "0 4px 20px rgba(196,160,170,.3)",
+            cursor: "pointer",
+          }}
+        >
+          {saved ? "已保存 ✓" : "保存所有设置"}
+        </button>
       </div>
     </main>
   );

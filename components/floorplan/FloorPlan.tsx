@@ -435,6 +435,7 @@ export function FloorPlan() {
                   borderRadius: 9999,
                   animation: "gentle-float 4s ease-in-out infinite",
                   border: "none",
+                  boxShadow: "0 0 20px rgba(255,255,255,0.35), 0 0 40px rgba(255,255,255,0.15), inset 0 0 12px rgba(255,255,255,0.2)",
                 }}
                 onClick={() => room.href && router.push(room.href)}
               >
@@ -442,7 +443,8 @@ export function FloorPlan() {
                   className="text-[24px] tracking-[0.3em]"
                   style={{
                     fontFamily: "var(--font-serif-sc)",
-                    color: "var(--primary)",
+                    color: "rgba(255,243,237,0.95)",
+                    textShadow: "0 0 12px rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.15)",
                   }}
                 >
                   {room.label}
