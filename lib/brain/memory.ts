@@ -25,7 +25,7 @@ export function toContext(
 ): { role: "user" | "assistant"; content: string }[] {
   const out: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of msgs) {
-    if (m.role === "inner" || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify" || m.role === "bedroom-invite") continue;
+    if (m.role !== "user" && m.role !== "assistant") continue;
     const last = out[out.length - 1];
     if (last && last.role === m.role) {
       last.content += "\n" + m.content;
