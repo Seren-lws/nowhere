@@ -126,6 +126,11 @@ export function TimelineCorridor() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
   const [newIcon, setNewIcon] = useState("favorite");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editIcon, setEditIcon] = useState("favorite");
 
   useEffect(() => {
     (async () => {
@@ -175,6 +180,39 @@ export function TimelineCorridor() {
       await fetch(`/api/timeline?id=${id}`, { method: "DELETE" });
       setEvents((prev) => prev.filter((e) => e.id !== id));
     } catch {}
+  };
+
+  const startEdit = (evt: TimelineEvent) => {
+    setEditingId(evt.id);
+    setEditTitle(evt.title);
+    setEditContent(evt.content ?? "");
+    setEditDate(evt.event_date);
+    setEditIcon(evt.icon);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editTitle.trim() || !editDate) return;
+    try {
+      const res = await fetch("/api/timeline", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: editingId,
+          title: editTitle.trim(),
+          content: editContent.trim() || null,
+          event_date: editDate,
+          icon: editIcon,
+        }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        setEvents((prev) =>
+          prev.map((e) => (e.id === data.id ? data : e))
+            .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()),
+        );
+      }
+    } catch {}
+    setEditingId(null);
   };
 
   const ICON_OPTIONS = [
@@ -442,40 +480,99 @@ export function TimelineCorridor() {
                         animationDelay: floatDelay,
                       }}
                     >
-                      {/* Delete button */}
-                      <button
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity active:scale-90 p-1"
-                        onClick={() => deleteEvent(evt.id)}
-                      >
-                        <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-                          close
-                        </span>
-                      </button>
+                      {editingId === evt.id ? (
+                        /* ─── Inline edit form ─── */
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full border-none outline-none rounded-lg p-2"
+                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "14px", color: "white", background: "rgba(255,255,255,0.1)" }}
+                            autoFocus
+                          />
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            placeholder="补充内容…（可选）"
+                            className="w-full border-none outline-none resize-none rounded-lg p-2"
+                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "13px", color: "white", background: "rgba(255,255,255,0.1)", minHeight: "40px" }}
+                          />
+                          <input
+                            type="date"
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                            className="border-none outline-none rounded-lg p-2"
+                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "white", background: "rgba(255,255,255,0.1)", colorScheme: "dark" }}
+                          />
+                          <div className="flex gap-1 flex-wrap">
+                            {ICON_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                className="w-7 h-7 rounded-md flex items-center justify-center text-[14px]"
+                                style={{
+                                  background: editIcon === opt.value ? "rgba(255,218,217,0.2)" : "transparent",
+                                  border: editIcon === opt.value ? "1px solid rgba(255,218,217,0.4)" : "1px solid transparent",
+                                }}
+                                onClick={() => setEditIcon(opt.value)}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2 justify-end mt-1">
+                            <button
+                              className="px-3 py-1.5 rounded-full text-[12px]"
+                              style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+                              onClick={() => setEditingId(null)}
+                            >
+                              取消
+                            </button>
+                            <button
+                              className="px-3 py-1.5 rounded-full text-[12px] active:scale-95"
+                              style={{ fontFamily: "var(--font-serif-sc)", color: "white", background: "rgba(123,84,85,0.7)" }}
+                              onClick={saveEdit}
+                            >
+                              保存
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ─── Display mode ─── */
+                        <>
+                          {/* Action buttons */}
+                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button className="active:scale-90 p-1" onClick={() => startEdit(evt)}>
+                              <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(255,255,255,0.3)" }}>edit</span>
+                            </button>
+                            <button className="active:scale-90 p-1" onClick={() => deleteEvent(evt.id)}>
+                              <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(255,255,255,0.3)" }}>close</span>
+                            </button>
+                          </div>
 
-                      {/* Date title */}
-                      <h3
-                        className="text-[15px] font-semibold mb-2"
-                        style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.95)" }}
-                      >
-                        {evt.title} · {formatDateLabel(evt.event_date)}
-                      </h3>
+                          <h3
+                            className="text-[15px] font-semibold mb-2"
+                            style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.95)" }}
+                          >
+                            {evt.title} · {formatDateLabel(evt.event_date)}
+                          </h3>
 
-                      {/* Content */}
-                      {evt.content && (
-                        <p
-                          className="text-[13px] leading-relaxed"
-                          style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}
-                        >
-                          {evt.content}
-                        </p>
+                          {evt.content && (
+                            <p
+                              className="text-[13px] leading-relaxed"
+                              style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}
+                            >
+                              {evt.content}
+                            </p>
+                          )}
+
+                          <div className="mt-3 flex items-center gap-2 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            <span style={{ fontFamily: "var(--font-serif-sc)" }}>{ago}</span>
+                            <span>·</span>
+                            <span style={{ fontFamily: "var(--font-serif-sc)" }}>{SOURCE_LABEL[evt.source] ?? evt.source}</span>
+                          </div>
+                        </>
                       )}
-
-                      {/* Meta */}
-                      <div className="mt-3 flex items-center gap-2 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                        <span style={{ fontFamily: "var(--font-serif-sc)" }}>{ago}</span>
-                        <span>·</span>
-                        <span style={{ fontFamily: "var(--font-serif-sc)" }}>{SOURCE_LABEL[evt.source] ?? evt.source}</span>
-                      </div>
                     </motion.div>
                   </div>
                 </div>

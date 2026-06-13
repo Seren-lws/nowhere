@@ -45,6 +45,35 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, title, content, event_date, icon } = body;
+    if (!id) {
+      return NextResponse.json({ error: "缺少 id" }, { status: 400 });
+    }
+    const updates: Record<string, unknown> = {};
+    if (title !== undefined) updates.title = title;
+    if (content !== undefined) updates.content = content || null;
+    if (event_date !== undefined) updates.event_date = event_date;
+    if (icon !== undefined) updates.icon = icon;
+
+    const { data, error } = await supabase
+      .from("timeline_events")
+      .update(updates)
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return NextResponse.json(data);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : String(e) },
+      { status: 500 },
+    );
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);

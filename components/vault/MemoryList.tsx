@@ -53,6 +53,10 @@ export function MemoryList() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [addContent, setAddContent] = useState("");
+  const [addType, setAddType] = useState("fact");
+  const [addTags, setAddTags] = useState("");
 
   const loadMemories = useCallback(async () => {
     let q = supabase
@@ -112,6 +116,29 @@ export function MemoryList() {
       prev.map((m) => (m.id === editingId ? { ...m, content: editContent } : m)),
     );
     setEditingId(null);
+  };
+
+  const addMemory = async () => {
+    if (!addContent.trim()) return;
+    const tags = addTags.split(/[,，、]/).map((t) => t.trim()).filter(Boolean);
+    const { data } = await supabase
+      .from("memory_items")
+      .insert({
+        content: addContent.trim(),
+        type: addType,
+        tags,
+        source_ref: "手动添加",
+        is_anchor: false,
+      })
+      .select("*")
+      .single();
+    if (data) {
+      setMemories((prev) => [data, ...prev]);
+    }
+    setAddContent("");
+    setAddTags("");
+    setAddType("fact");
+    setShowAdd(false);
   };
 
   return (
@@ -176,6 +203,107 @@ export function MemoryList() {
           );
         })}
       </div>
+
+      {/* Add memory button + form */}
+      <div className="flex justify-end">
+        <button
+          className="flex items-center gap-1 px-4 py-2 rounded-full text-[13px] transition-all active:scale-95"
+          style={{
+            fontFamily: "var(--font-serif-sc)",
+            color: "var(--primary)",
+            background: "rgba(123,84,85,0.08)",
+            border: "1px solid rgba(123,84,85,0.15)",
+          }}
+          onClick={() => setShowAdd(!showAdd)}
+        >
+          <span className="material-symbols-outlined text-[16px]">add</span>
+          手动添加
+        </button>
+      </div>
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div
+              className="rounded-2xl p-5 flex flex-col gap-3"
+              style={{
+                background: "rgba(255,255,255,0.35)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.4)",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+              }}
+            >
+              <textarea
+                placeholder="写下一条记忆…"
+                value={addContent}
+                onChange={(e) => setAddContent(e.target.value)}
+                className="w-full border-none outline-none resize-none rounded-xl p-3"
+                style={{
+                  fontFamily: "var(--font-serif-sc)",
+                  fontSize: "14px",
+                  color: "var(--text-deep)",
+                  background: "rgba(255,255,255,0.4)",
+                  minHeight: "60px",
+                }}
+                autoFocus
+              />
+              <div className="flex gap-2 items-center flex-wrap">
+                <span className="text-[12px]" style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-faint)" }}>类型</span>
+                {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                  <button
+                    key={k}
+                    className="px-3 py-1 rounded-full text-[12px] transition-all"
+                    style={{
+                      fontFamily: "var(--font-serif-sc)",
+                      color: addType === k ? "var(--primary)" : "var(--text-mid)",
+                      background: addType === k ? "rgba(123,84,85,0.12)" : "rgba(255,255,255,0.3)",
+                      border: `1px solid ${addType === k ? "rgba(123,84,85,0.25)" : "rgba(255,255,255,0.3)"}`,
+                    }}
+                    onClick={() => setAddType(k)}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="标签（用逗号分隔，可选）"
+                value={addTags}
+                onChange={(e) => setAddTags(e.target.value)}
+                className="w-full border-none outline-none rounded-xl p-3"
+                style={{
+                  fontFamily: "var(--font-serif-sc)",
+                  fontSize: "13px",
+                  color: "var(--text-deep)",
+                  background: "rgba(255,255,255,0.4)",
+                }}
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="px-4 py-2 rounded-full text-[12px]"
+                  style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-mid)", background: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.3)" }}
+                  onClick={() => { setShowAdd(false); setAddContent(""); setAddTags(""); }}
+                >
+                  取消
+                </button>
+                <button
+                  className="px-4 py-2 rounded-full text-[12px] active:scale-95"
+                  style={{ fontFamily: "var(--font-serif-sc)", color: "white", background: "var(--primary)" }}
+                  onClick={addMemory}
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Memory cards */}
       {loading ? (
