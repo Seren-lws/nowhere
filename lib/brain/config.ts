@@ -24,6 +24,10 @@ export interface BrainSettings {
   barkKey: string;
   /** Tavily API Key（联网搜索） */
   tavilyKey: string;
+  /** ElevenLabs API Key（语音消息） */
+  elevenLabsKey: string;
+  /** ElevenLabs Voice ID（音色） */
+  elevenLabsVoiceId: string;
 }
 
 export const DEFAULT_SETTINGS: BrainSettings = {
@@ -36,6 +40,8 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   ttsVoice: "male-qn-qingse",
   barkKey: "",
   tavilyKey: "",
+  elevenLabsKey: "",
+  elevenLabsVoiceId: "pU6Nb7V1jj4swj5j28sM",
 };
 
 export const SETTINGS_KEY = "nowhere:settings";

@@ -15,6 +15,7 @@ import {
   WEB_SEARCH_TOOL,
   SET_REMINDER_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
+  SEND_VOICE_TOOL,
   INVITE_BEDROOM_TOOL,
   parseReply,
   type ChatMode,
@@ -209,7 +210,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -285,6 +286,18 @@ export function LivingRoom() {
       if (resp.personalityRequest) {
         await delay(150);
         acc.push({ role: "tool-notify", content: "personality", ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
+      if (resp.voiceMessage) {
+        await delay(150);
+        acc.push({ role: "voice-notify", content: "他正在说话…", ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+        await delay(300);
+        const audioUrl = `data:audio/mpeg;base64,${resp.voiceMessage.audioBase64}`;
+        acc.push({ role: "voice", content: JSON.stringify({ text: resp.voiceMessage.text, audioUrl }), ts: t++ });
         setMessages([...acc]);
         saveHistory(acc);
       }
@@ -488,6 +501,10 @@ export function LivingRoom() {
                   <FavNotifyCard text={m.content} />
                 ) : m.role === "search-notify" ? (
                   <SearchNotifyCard query={m.content} />
+                ) : m.role === "voice-notify" ? (
+                  <VoiceNotifyCard />
+                ) : m.role === "voice" ? (
+                  <VoiceBubble data={m.content} />
                 ) : m.role === "tool-notify" ? (
                   <ToolNotifyCard payload={m.content} />
                 ) : m.role === "bedroom-invite" ? (
@@ -1425,6 +1442,159 @@ function InnerBubble({ content, onFavorite }: { content: string; onFavorite?: ()
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ─── Voice Notify Card ─── */
+
+function VoiceNotifyCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-center"
+    >
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+        style={{
+          background: "rgba(103,143,122,0.08)",
+          border: "1px solid rgba(103,143,122,0.15)",
+          fontFamily: "var(--font-serif-sc)",
+          fontSize: "12px",
+          color: "#6b8f7a",
+        }}
+      >
+        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+          mic
+        </span>
+        他正在说话…
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Voice Bubble ─── */
+
+function VoiceBubble({ data }: { data: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [showText, setShowText] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  let parsed: { text: string; audioUrl: string };
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return null;
+  }
+
+  const cleanText = parsed.text.replace(/\[(softly|teasing|laughs softly|rushed|drawn out|pause|long pause)\]\s*/gi, "");
+
+  const togglePlay = () => {
+    if (!audioRef.current) {
+      const audio = new Audio(parsed.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => setPlaying(false);
+      audio.onerror = () => setPlaying(false);
+    }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col items-start gap-2"
+    >
+      <div
+        className="rounded-xl overflow-hidden max-w-[80%]"
+        style={{
+          background: "linear-gradient(135deg, rgba(107,143,122,0.12), rgba(140,180,160,0.08))",
+          border: "1px solid rgba(107,143,122,0.2)",
+          boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+        }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{
+              background: "linear-gradient(135deg, #6b8f7a, #8cb4a0)",
+              boxShadow: "0 2px 8px rgba(107,143,122,0.3)",
+            }}
+          >
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "white", fontVariationSettings: "'FILL' 1" }}>
+              {playing ? "pause" : "play_arrow"}
+            </span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              {playing && (
+                <div className="flex items-end gap-0.5 h-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-[3px] rounded-full"
+                      style={{ background: "#6b8f7a" }}
+                      animate={{ height: [4, 12 + Math.random() * 4, 6, 14, 4] }}
+                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
+                    />
+                  ))}
+                </div>
+              )}
+              {!playing && (
+                <div className="flex items-end gap-0.5 h-4">
+                  {[8, 12, 6, 14, 10, 8, 4].map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-[3px] rounded-full"
+                      style={{ background: "#6b8f7a", height: h, opacity: 0.4 }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setShowText(!showText)}
+              className="mt-1 text-[11px] transition-colors"
+              style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              {showText ? "收起文字" : "查看文字"}
+            </button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {showText && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div
+                className="px-4 pb-3 pt-1"
+                style={{ borderTop: "1px solid rgba(107,143,122,0.15)" }}
+              >
+                <p
+                  className="text-[13px] leading-relaxed whitespace-pre-wrap"
+                  style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+                >
+                  {cleanText}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }

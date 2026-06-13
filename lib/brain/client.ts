@@ -23,6 +23,7 @@ export interface ChatResponse {
   timelineEvent?: string;
   reminderSet?: string;
   personalityRequest?: boolean;
+  voiceMessage?: { text: string; audioBase64: string };
 }
 
 export async function sendChat(
@@ -41,6 +42,8 @@ export async function sendChat(
         apiKey: settings.apiKey,
         model: settings.chatModel,
         tavilyKey: settings.tavilyKey,
+        elevenLabsKey: settings.elevenLabsKey,
+        elevenLabsVoiceId: settings.elevenLabsVoiceId,
       },
       tools,
       room,

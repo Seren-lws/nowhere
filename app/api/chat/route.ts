@@ -18,7 +18,7 @@ interface SavedFavorite {
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
-  config: { baseUrl: string; apiKey: string; model: string; tavilyKey?: string };
+  config: { baseUrl: string; apiKey: string; model: string; tavilyKey?: string; elevenLabsKey?: string; elevenLabsVoiceId?: string };
   tools?: unknown[];
   room?: string;
 }
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
   let timelineEvent: string | null = null;
   let reminderSet: string | null = null;
   let personalityRequest = false;
+  let voiceMessage: { text: string; audioBase64: string } | null = null;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -281,6 +282,51 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "send_voice") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const voiceText = args.text?.trim();
+            if (!voiceText) {
+              result = JSON.stringify({ ok: false, error: "没有台词内容" });
+            } else if (!config.elevenLabsKey || !config.elevenLabsVoiceId) {
+              result = JSON.stringify({ ok: false, error: "未配置 ElevenLabs API Key 或 Voice ID" });
+            } else {
+              const ttsRes = await fetch(
+                `https://api.elevenlabs.io/v1/text-to-speech/${config.elevenLabsVoiceId}`,
+                {
+                  method: "POST",
+                  headers: {
+                    "xi-api-key": config.elevenLabsKey,
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    text: voiceText,
+                    model_id: "eleven_v3",
+                    language_code: "zh",
+                    voice_settings: {
+                      stability: 0.34,
+                      similarity_boost: 0.75,
+                      style: 0.84,
+                      speed: 1.2,
+                    },
+                  }),
+                }
+              );
+              if (!ttsRes.ok) {
+                const errText = await ttsRes.text();
+                result = JSON.stringify({ ok: false, error: `语音生成失败 (${ttsRes.status}): ${errText.slice(0, 200)}` });
+              } else {
+                const audioBuffer = await ttsRes.arrayBuffer();
+                const audioBase64 = Buffer.from(audioBuffer).toString("base64");
+                voiceMessage = { text: voiceText, audioBase64 };
+              }
+            }
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         } else if (tc.function.name === "invite_bedroom") {
           try {
             const args = JSON.parse(tc.function.arguments);
@@ -338,6 +384,7 @@ export async function POST(req: Request) {
       ...(timelineEvent ? { timelineEvent } : {}),
       ...(reminderSet ? { reminderSet } : {}),
       ...(personalityRequest ? { personalityRequest } : {}),
+      ...(voiceMessage ? { voiceMessage } : {}),
     });
   }
 

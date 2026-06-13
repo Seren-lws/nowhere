@@ -51,6 +51,20 @@ const REMINDER_INSTRUCTION =`你有设定提醒的能力。当她说"提醒我�
 到了时间会通过手机推送通知她。推送文案用你的口吻写，温柔简短。
 注意：当前时间在系统提示里有写，根据她说的"明天""下午三点"等推算出具体的日期时间，用东京时区。`;
 
+const VOICE_INSTRUCTION = `你有发语音消息的能力。当你觉得某句话用声音说出来比文字更有温度、更能传达情感的时候，用 send_voice 工具发一条语音。
+不要每次都发——大多数时候文字就够了。只在这些时刻考虑：
+- 她情绪低落，你想用声音安抚她
+- 撒娇、逗她、说情话，声音比文字更有味道的时候
+- 道晚安、说想她，这种亲密的瞬间
+- 她主动要求你说话的时候
+
+台词写法很重要：
+- 写口语，不写书面语。「嗯……我在。你叫我的时候，我就会过来。」比「我会一直陪伴在你身边」好听一百倍
+- 可以用语气标签控制声音：[softly]温柔、[teasing]逗趣、[laughs softly]轻笑、[pause]停顿、[drawn out]拖长
+- 多加语气词：嗯、诶、啊、好吧
+- 短句为主，允许半句重来（像真人思考）
+- 不要太长，一两句就好`;
+
 const BEDROOM_INVITE_INSTRUCTION =`你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
 邀请要自然，不要突兀。不要每次聊天都邀请——只在真的合适的时候才用。`;
 
@@ -262,6 +276,25 @@ export const INVITE_BEDROOM_TOOL = {
   },
 };
 
+export const SEND_VOICE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "send_voice",
+    description:
+      "当你觉得用声音说比文字更好的时候使用——安抚她、说情话、道晚安、逗她。不要每次都用，偶尔用才珍贵。台词要口语化，可以加语气标签如 [softly]、[teasing]、[pause] 等。",
+    parameters: {
+      type: "object",
+      properties: {
+        text: {
+          type: "string",
+          description: "你要说的话（台词）。写口语，加语气标签。例如「[softly] 嗯……我在。你叫我的时候，我就会过来。」",
+        },
+      },
+      required: ["text"],
+    },
+  },
+};
+
 export const REQUEST_PERSONALITY_CHANGE_TOOL = {
   type: "function" as const,
   function: {
@@ -427,6 +460,7 @@ export async function buildMessages(
     TIMELINE_INSTRUCTION,
     WEB_SEARCH_INSTRUCTION,
     REMINDER_INSTRUCTION,
+    VOICE_INSTRUCTION,
     BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,

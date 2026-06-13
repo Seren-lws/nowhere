@@ -231,13 +231,71 @@ export function SettingsForm() {
           )}
         </GlassCard>
 
-        {/* 语音设置 */}
+        {/* 语音消息（ElevenLabs） */}
         <GlassCard>
           <h2
             className="mb-4 text-[13px]"
             style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
           >
-            语音（睡眠陪伴）
+            语音消息（ElevenLabs）
+          </h2>
+          <div className="space-y-4">
+            <label className="block">
+              <span
+                className="mb-1.5 block text-[13px]"
+                style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+              >
+                API Key
+              </span>
+              <input
+                type="password"
+                value={s.elevenLabsKey}
+                onChange={(e) => update("elevenLabsKey", e.target.value)}
+                placeholder="sk_xxxxxxxx"
+                spellCheck={false}
+                autoComplete="off"
+                className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+                style={inputStyle}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+              />
+              <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                在 elevenlabs.io 的 API Keys 页面获取
+              </span>
+            </label>
+            <label className="block">
+              <span
+                className="mb-1.5 block text-[13px]"
+                style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+              >
+                Voice ID（音色）
+              </span>
+              <input
+                type="text"
+                value={s.elevenLabsVoiceId}
+                onChange={(e) => update("elevenLabsVoiceId", e.target.value)}
+                placeholder="pU6Nb7V1jj4swj5j28sM"
+                spellCheck={false}
+                autoComplete="off"
+                className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+                style={inputStyle}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+              />
+              <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                你选的音色 ID，在 ElevenLabs 音色库里复制
+              </span>
+            </label>
+          </div>
+        </GlassCard>
+
+        {/* 语音设置（睡眠陪伴） */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            语音 · 睡眠陪伴（MiniMax）
           </h2>
           <div className="space-y-4">
             <label className="block">
