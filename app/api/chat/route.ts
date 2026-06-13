@@ -217,6 +217,23 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "set_reminder") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const { error: remErr } = await supabase
+              .from("reminders")
+              .insert({
+                content: args.content,
+                remind_at: args.remind_at,
+                bark_message: args.bark_message,
+              });
+            if (remErr) throw remErr;
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         } else if (tc.function.name === "invite_bedroom") {
           try {
             const args = JSON.parse(tc.function.arguments);

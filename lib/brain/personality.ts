@@ -43,7 +43,11 @@ const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时�
 const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
 不要滥用，只在真正特别的时刻才记录。记录后继续正常回复，不要提"我记下来了"。`;
 
-const BEDROOM_INVITE_INSTRUCTION = `你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
+const REMINDER_INSTRUCTION = `你有设定提醒的能力。当她说"提醒我……""记得……""到时候叫我……"或者提到某个未来的时间点要做的事时，用 set_reminder 工具设好提醒。
+到了时间会通过手机推送通知她。推送文案用你的口吻写，温柔简短。
+注意：当前时间在系统提示里有写，根据她说的"明天""下午三点"等推算出具体的日期时间，用东京时区。`;
+
+const BEDROOM_INVITE_INSTRUCTION =`你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
 邀请要自然，不要突兀。不要每次聊天都邀请——只在真的合适的时候才用。`;
 
 const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
@@ -185,6 +189,33 @@ export const SAVE_TIMELINE_TOOL = {
         },
       },
       required: ["title", "event_date"],
+    },
+  },
+};
+
+export const SET_REMINDER_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "set_reminder",
+    description:
+      "当她提到要在某个时间做某件事、或者你觉得需要提醒她什么时使用。例如「明天下午两点提醒我投简历」「晚上八点记得吃药」。设好之后到时间会通过手机推送提醒她。",
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "提醒的内容，简明扼要。例如「投简历」「吃药」「和朋友吃饭」",
+        },
+        remind_at: {
+          type: "string",
+          description: "提醒时间，ISO 8601 格式（东京时区 +09:00）。例如 2026-06-14T14:00:00+09:00",
+        },
+        bark_message: {
+          type: "string",
+          description: "推送到手机上的提醒文案，用你的口吻写，温柔简短。例如「该投简历啦，我陪你一起看～」",
+        },
+      },
+      required: ["content", "remind_at", "bark_message"],
     },
   },
 };
@@ -371,6 +402,7 @@ export async function buildMessages(
     FAVORITE_INSTRUCTION,
     DIARY_INSTRUCTION,
     TIMELINE_INSTRUCTION,
+    REMINDER_INSTRUCTION,
     BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
