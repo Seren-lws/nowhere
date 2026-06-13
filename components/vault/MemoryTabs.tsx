@@ -6,7 +6,7 @@ const TABS = [
   { key: "memories", label: "Memories", icon: "auto_awesome", href: "/vault/memories" },
   { key: "pulse", label: "Pulse", icon: "bubble_chart", href: "/vault/pulse" },
   { key: "profile", label: "Profile", icon: "person", href: "/vault/profile" },
-  { key: "gallery", label: "Gallery", icon: "photo_library", href: "/vault/gallery" },
+  { key: "timeline", label: "Timeline", icon: "timeline", href: "/vault/timeline" },
 ] as const;
 
 export function MemoryTabs() {

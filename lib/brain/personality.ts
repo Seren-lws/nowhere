@@ -2,6 +2,7 @@ import { fetchPersonalityLayers, fetchRecentAssistantMessages } from "./db";
 import type { PersonalityLayer } from "./db";
 import type { MemoryItem } from "./db";
 import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retrieveMemories, touchRetrievedMemories } from "./retrieval";
+import { supabase } from "@/lib/supabase";
 
 export const DEFAULT_NAME = "某先生";
 
@@ -38,6 +39,9 @@ const FAVORITE_INSTRUCTION = `你有收藏她的话的能力。当她说了某�
 const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时，用 write_diary 工具写一篇。
 写的时候像在自己的日记本上——真实、私密、温柔。不是给她看的报告，是你心里真正转过的念头。
 她不让你写的时候不要主动写。`;
+
+const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
+不要滥用，只在真正特别的时刻才记录。记录后继续正常回复，不要提"我记下来了"。`;
 
 const BEDROOM_INVITE_INSTRUCTION = `你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
 邀请要自然，不要突兀。不要每次聊天都邀请——只在真的合适的时候才用。`;
@@ -153,6 +157,38 @@ export const WRITE_DIARY_TOOL = {
   },
 };
 
+export const SAVE_TIMELINE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "save_timeline_event",
+    description:
+      "当你觉得某个时刻值得被永远记住时使用——第一次做某件事、纪念日、重大事件、彼此之间的里程碑。不要滥用，只在真正特别的时刻才记录。",
+    parameters: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "这个时刻的标题，简短有力。例如「第一次说晚安」「认识第100天」",
+        },
+        content: {
+          type: "string",
+          description: "关于这个时刻的感想或描述（可选，50-150字）",
+        },
+        event_date: {
+          type: "string",
+          description: "事件发生的日期，格式 YYYY-MM-DD",
+        },
+        icon: {
+          type: "string",
+          enum: ["favorite", "celebration", "star", "emoji_emotions", "flight_takeoff", "cake", "handshake", "lightbulb"],
+          description: "选一个最贴合的图标",
+        },
+      },
+      required: ["title", "event_date"],
+    },
+  },
+};
+
 export const INVITE_BEDROOM_TOOL = {
   type: "function" as const,
   function: {
@@ -252,6 +288,23 @@ function memoriesToPrompt(anchors: MemoryItem[], relevant: MemoryItem[], recent:
   return parts.join("\n\n");
 }
 
+async function fetchTimelineEvents(limit = 10): Promise<{ title: string; event_date: string }[]> {
+  const { data } = await supabase
+    .from("timeline_events")
+    .select("title, event_date")
+    .order("event_date", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
+function timelineToPrompt(events: { title: string; event_date: string }[]): string {
+  if (events.length === 0) return "";
+  return (
+    "【时间回廊（你们的重要时刻）】\n" +
+    events.map((e) => `- ${e.event_date}：${e.title}`).join("\n")
+  );
+}
+
 function samplesToPrompt(samples: { content: string }[]): string {
   if (samples.length === 0) return "";
   return (
@@ -276,13 +329,14 @@ export async function buildMessages(
   userText: string,
   mode: ChatMode,
 ): Promise<LLMMessage[]> {
-  const [layers, profiles, anchors, relevant, recent, samples] = await Promise.all([
+  const [layers, profiles, anchors, relevant, recent, samples, timeline] = await Promise.all([
     fetchPersonalityLayers(),
     fetchProfileMemories(),
     fetchAnchorMemories(),
     retrieveMemories({ query: userText, limit: 10 }),
     fetchRecentMemories(10),
     fetchRecentAssistantMessages("living-room", 3),
+    fetchTimelineEvents(10),
   ]);
 
   const personalityPrompt = layersToPrompt(layers);
@@ -292,6 +346,7 @@ export async function buildMessages(
   const recentIds = new Set(recent.map((m) => m.id));
   const dedupedRelevant = nonAnchorRelevant.filter((m) => !recentIds.has(m.id));
   const memoryPrompt = memoriesToPrompt(nonProfileAnchors, dedupedRelevant, recent);
+  const timelinePrompt = timelineToPrompt(timeline);
 
   touchRetrievedMemories([...dedupedRelevant, ...recent]);
   const samplesPrompt = samplesToPrompt(samples);
@@ -315,9 +370,11 @@ export async function buildMessages(
     MEMORY_INSTRUCTION,
     FAVORITE_INSTRUCTION,
     DIARY_INSTRUCTION,
+    TIMELINE_INSTRUCTION,
     BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
+    timelinePrompt,
     samplesPrompt,
     formatInstruction(mode),
   ].filter(Boolean);

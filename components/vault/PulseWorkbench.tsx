@@ -109,7 +109,7 @@ export function PulseWorkbench() {
         <div className="flex items-start justify-between">
           <div>
             <h2
-              className="text-[28px] font-semibold mb-2"
+              className="text-[22px] font-semibold mb-2"
               style={{
                 fontFamily: "var(--font-serif-sc)",
                 color: "var(--text-deep)",
@@ -118,7 +118,7 @@ export function PulseWorkbench() {
               园丁日志
             </h2>
             <p
-              className="text-[16px] leading-6 max-w-md"
+              className="text-[13px] leading-5 max-w-md"
               style={{
                 fontFamily: "var(--font-serif-sc)",
                 color: "var(--text-mid)",

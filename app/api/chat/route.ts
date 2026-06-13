@@ -198,6 +198,25 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "save_timeline_event") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const { error: tlError } = await supabase
+              .from("timeline_events")
+              .insert({
+                title: args.title,
+                content: args.content ?? null,
+                event_date: args.event_date,
+                icon: args.icon ?? "favorite",
+                source: "ai",
+              });
+            if (tlError) throw tlError;
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         } else if (tc.function.name === "invite_bedroom") {
           try {
             const args = JSON.parse(tc.function.arguments);

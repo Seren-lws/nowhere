@@ -129,7 +129,7 @@ export function ProfileView() {
       <header className="flex items-start justify-between px-1 mb-2 mt-3">
         <div>
           <h2
-            className="text-[28px] font-semibold tracking-wide"
+            className="text-[22px] font-semibold tracking-wide"
             style={{
               fontFamily: "var(--font-serif-sc)",
               color: "var(--text-deep)",
@@ -138,7 +138,7 @@ export function ProfileView() {
             关于她的一切
           </h2>
           <p
-            className="text-[16px] mt-1"
+            className="text-[13px] mt-1"
             style={{
               fontFamily: "var(--font-serif-sc)",
               color: "var(--text-mid)",
