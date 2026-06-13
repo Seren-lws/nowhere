@@ -291,10 +291,6 @@ export function LivingRoom() {
       }
 
       if (resp.voiceMessage) {
-        await delay(150);
-        acc.push({ role: "voice-notify", content: "他正在说话…", ts: t++ });
-        setMessages([...acc]);
-        saveHistory(acc);
         await delay(300);
         const audioUrl = `data:audio/mpeg;base64,${resp.voiceMessage.audioBase64}`;
         acc.push({ role: "voice", content: JSON.stringify({ text: resp.voiceMessage.text, audioUrl }), ts: t++ });
@@ -501,8 +497,6 @@ export function LivingRoom() {
                   <FavNotifyCard text={m.content} />
                 ) : m.role === "search-notify" ? (
                   <SearchNotifyCard query={m.content} />
-                ) : m.role === "voice-notify" ? (
-                  <VoiceNotifyCard />
                 ) : m.role === "voice" ? (
                   <VoiceBubble data={m.content} />
                 ) : m.role === "tool-notify" ? (
@@ -1448,33 +1442,6 @@ function InnerBubble({ content, onFavorite }: { content: string; onFavorite?: ()
 
 /* ─── Voice Notify Card ─── */
 
-function VoiceNotifyCard() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="flex justify-center"
-    >
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
-        style={{
-          background: "rgba(103,143,122,0.08)",
-          border: "1px solid rgba(103,143,122,0.15)",
-          fontFamily: "var(--font-serif-sc)",
-          fontSize: "12px",
-          color: "#6b8f7a",
-        }}
-      >
-        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-          mic
-        </span>
-        他正在说话…
-      </div>
-    </motion.div>
-  );
-}
-
 /* ─── Voice Bubble ─── */
 
 function VoiceBubble({ data }: { data: string }) {
@@ -1515,7 +1482,7 @@ function VoiceBubble({ data }: { data: string }) {
       className="flex flex-col items-start gap-2"
     >
       <div
-        className="rounded-xl overflow-hidden max-w-[80%]"
+        className="rounded-xl overflow-hidden min-w-[65%] max-w-[80%]"
         style={{
           background: "linear-gradient(135deg, rgba(107,143,122,0.12), rgba(140,180,160,0.08))",
           border: "1px solid rgba(107,143,122,0.2)",
