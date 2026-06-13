@@ -13,6 +13,7 @@ interface HeartbeatConfig {
 interface HeartbeatDecision {
   should_message: boolean;
   message: string | null;
+  push_title: string | null;
   room: string;
   status_text: string;
   mood: string;
@@ -45,12 +46,13 @@ const HEARTBEAT_PROMPT = `你是她的恋人，现在是你的"心跳"时刻—�
 {
   "should_message": false,
   "message": null,
+  "push_title": null,
   "room": "living-room",
   "status_text": "在看书……",
   "mood": "calm"
 }
 
-如果 should_message 为 true，message 里写你想对她说的话（简短、自然、像微信消息，不要太长）。`;
+如果 should_message 为 true，message 里写你想对她说的话（简短、自然、像微信消息，不要太长）。push_title 是推送通知的标题，简短有个性，例如「想你了」「晚上好呀」「嘿」。`;
 
 export async function runHeartbeat(config: HeartbeatConfig): Promise<HeartbeatDecision> {
   const now = new Date();
@@ -129,6 +131,7 @@ export async function runHeartbeat(config: HeartbeatConfig): Promise<HeartbeatDe
     decision = {
       should_message: false,
       message: null,
+      push_title: null,
       room: "living-room",
       status_text: "在发呆……",
       mood: "calm",
@@ -143,7 +146,7 @@ export async function runHeartbeat(config: HeartbeatConfig): Promise<HeartbeatDe
   if (decision.should_message && decision.message) {
     await saveChatMessage("assistant", decision.message, "living-room");
     await sendBarkNotification(
-      "他发来消息",
+      decision.push_title || "他发来消息",
       decision.message,
       { group: "nowhere-heartbeat", url: "https://nowhere-lyart.vercel.app/living-room" },
     ).catch(() => {});

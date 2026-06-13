@@ -272,6 +272,7 @@ export async function POST(req: Request) {
               .insert({
                 content: args.content,
                 remind_at: args.remind_at,
+                bark_title: args.bark_title || null,
                 bark_message: args.bark_message,
               });
             if (remErr) throw remErr;

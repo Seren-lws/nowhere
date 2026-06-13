@@ -18,6 +18,8 @@ export interface BrainSettings {
   embeddingModel: string;
   /** Bark 推送 Device Key（iOS 通知） */
   barkKey: string;
+  /** Bark 推送头像（emoji 或图片 URL） */
+  barkIcon: string;
   /** Tavily API Key（联网搜索） */
   tavilyKey: string;
   /** ElevenLabs API Key（语音消息） */
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   gardenerModel: "gpt-4o-mini",
   embeddingModel: "text-embedding-3-small",
   barkKey: "",
+  barkIcon: "🐘",
   tavilyKey: "",
   elevenLabsKey: "",
   elevenLabsVoiceId: "pU6Nb7V1jj4swj5j28sM",

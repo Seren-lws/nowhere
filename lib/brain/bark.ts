@@ -1,12 +1,18 @@
 import { supabase } from "@/lib/supabase";
 
-async function getBarkKey(): Promise<string | null> {
+async function getBarkConfig(): Promise<{ key: string; icon: string } | null> {
   const { data } = await supabase
     .from("server_config")
-    .select("value")
-    .eq("key", "barkKey")
-    .single();
-  return data?.value || null;
+    .select("key, value")
+    .in("key", ["barkKey", "barkIcon"]);
+
+  if (!data || data.length === 0) return null;
+
+  const map: Record<string, string> = {};
+  for (const row of data) map[row.key] = row.value;
+
+  if (!map.barkKey) return null;
+  return { key: map.barkKey, icon: map.barkIcon || "🐘" };
 }
 
 export async function sendBarkNotification(
@@ -14,16 +20,16 @@ export async function sendBarkNotification(
   body: string,
   options?: { group?: string; icon?: string; url?: string },
 ): Promise<boolean> {
-  const key = await getBarkKey();
-  if (!key) return false;
+  const config = await getBarkConfig();
+  if (!config) return false;
 
   const params = new URLSearchParams();
   if (options?.group) params.set("group", options.group);
-  if (options?.icon) params.set("icon", options.icon);
+  params.set("icon", options?.icon || config.icon);
   if (options?.url) params.set("url", options.url);
 
   const qs = params.toString();
-  const url = `https://api.day.app/${key}/${encodeURIComponent(title)}/${encodeURIComponent(body)}${qs ? `?${qs}` : ""}`;
+  const url = `https://api.day.app/${config.key}/${encodeURIComponent(title)}/${encodeURIComponent(body)}${qs ? `?${qs}` : ""}`;
 
   try {
     const res = await fetch(url);

@@ -290,6 +290,29 @@ export function SettingsForm() {
               用于园丁巡逻、心跳消息、定时提醒等推送到 iPhone
             </span>
           </label>
+          <label className="mt-4 block">
+            <span
+              className="mb-1.5 block text-[13px]"
+              style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+            >
+              推送头像
+            </span>
+            <input
+              type="text"
+              value={s.barkIcon}
+              onChange={(e) => update("barkIcon", e.target.value)}
+              placeholder="🐘"
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+            />
+            <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+              填 emoji 或图片 URL，显示在推送通知上
+            </span>
+          </label>
         </GlassCard>
 
         {/* 联网搜索 */}

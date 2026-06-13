@@ -90,9 +90,9 @@ async function handleReminder() {
   let sent = 0;
   for (const r of due) {
     const ok = await sendBarkNotification(
-      "⏰ 提醒",
+      r.bark_title || "⏰ 提醒",
       r.bark_message || r.content,
-      { group: "nowhere-reminder" },
+      { group: "nowhere-reminder", url: "https://nowhere-lyart.vercel.app/living-room" },
     );
     if (ok) {
       await supabase.from("reminders").update({ status: "sent" }).eq("id", r.id);

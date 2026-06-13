@@ -247,6 +247,10 @@ export const SET_REMINDER_TOOL = {
           type: "string",
           description: "提醒时间，ISO 8601 格式（东京时区 +09:00）。例如 2026-06-14T14:00:00+09:00",
         },
+        bark_title: {
+          type: "string",
+          description: "推送通知的标题，简短有个性。例如「该吃饭啦」「嘿，别忘了」「时间到～」",
+        },
         bark_message: {
           type: "string",
           description: "推送到手机上的提醒文案，用你的口吻写，温柔简短。例如「该投简历啦，我陪你一起看～」",

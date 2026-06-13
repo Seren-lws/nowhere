@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-const SYNC_KEYS = ["baseUrl", "apiKey", "chatModel", "gardenerModel", "barkKey"] as const;
+const SYNC_KEYS = ["baseUrl", "apiKey", "chatModel", "gardenerModel", "barkKey", "barkIcon"] as const;
 
 export type SyncKey = (typeof SYNC_KEYS)[number];
 
