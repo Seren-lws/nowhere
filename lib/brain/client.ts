@@ -18,6 +18,7 @@ export interface ChatResponse {
   savedMemories?: SavedMemoryInfo[];
   savedFavorites?: SavedFavoriteInfo[];
   bedroomInvite?: string;
+  searchQuery?: string;
 }
 
 export async function sendChat(

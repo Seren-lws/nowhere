@@ -2,7 +2,7 @@ import { saveChatMessage, loadChatMessages } from "./db";
 
 import type { SavedMemoryInfo } from "./client";
 
-export type ChatRole = "user" | "assistant" | "inner" | "memory" | "diary-notify" | "fav-notify" | "bedroom-invite";
+export type ChatRole = "user" | "assistant" | "inner" | "memory" | "diary-notify" | "fav-notify" | "search-notify" | "bedroom-invite";
 
 export interface DiaryShareData {
   id: string;

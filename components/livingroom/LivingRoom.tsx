@@ -230,6 +230,13 @@ export function LivingRoom() {
         saveHistory(acc);
       }
 
+      if (resp.searchQuery) {
+        await delay(150);
+        acc.push({ role: "search-notify", content: resp.searchQuery, ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
       if (inner) {
         await delay(220);
         const innerMsg: ChatMessage = { role: "inner", content: inner, ts: t++ };
@@ -451,6 +458,8 @@ export function LivingRoom() {
                   <DiaryNotifyCard diaryId={m.content} />
                 ) : m.role === "fav-notify" ? (
                   <FavNotifyCard text={m.content} />
+                ) : m.role === "search-notify" ? (
+                  <SearchNotifyCard query={m.content} />
                 ) : m.role === "bedroom-invite" ? (
                   <BedroomInviteCard message={m.content} onAccept={() => goToBedroom()} />
                 ) : m.diaryShare ? (
@@ -468,7 +477,7 @@ export function LivingRoom() {
                     onEditResend={() => editResend(m.ts)}
                     onRetry={() => retryFrom(m.ts)}
                     onFavorite={
-                      m.role === "assistant"
+                      m.role === "assistant" || m.role === "inner"
                         ? () => favoriteChat(m.content, m.ts)
                         : undefined
                     }
@@ -769,46 +778,7 @@ function Bubble({
 
   if (role === "inner") {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="flex flex-col items-start"
-      >
-        <details className="w-full max-w-[85%] group" open>
-          <summary className="flex items-center gap-1.5 px-1 cursor-pointer list-none italic select-none">
-            <span
-              className="material-symbols-outlined text-[12px]"
-              style={{ color: "var(--accent-wisteria)" }}
-            >
-              chat_bubble
-            </span>
-            <span className="text-[11px]" style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}>
-              心声
-            </span>
-            <span
-              className="material-symbols-outlined text-[12px] transition-transform group-open:rotate-180"
-              style={{ color: "var(--text-faint)", opacity: 0.4 }}
-            >
-              expand_more
-            </span>
-          </summary>
-          <div
-            className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap"
-            style={{
-              background: "rgba(255,255,255,0.4)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              fontFamily: "var(--font-serif-sc)",
-              color: "var(--text-deep)",
-              lineHeight: "1.6",
-              fontSize: "12.5px",
-            }}
-          >
-            {content}
-          </div>
-        </details>
-      </motion.div>
+      <InnerBubble content={content} onFavorite={onFavorite} />
     );
   }
 
@@ -1311,6 +1281,120 @@ function BedroomInviteCard({ message, onAccept }: { message: string; onAccept: (
           </button>
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+/* ─── Search Notify Card ─── */
+
+function SearchNotifyCard({ query }: { query: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-center"
+    >
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+        style={{
+          background: "rgba(103,87,126,0.08)",
+          border: "1px solid rgba(103,87,126,0.15)",
+          fontFamily: "var(--font-serif-sc)",
+          fontSize: "12px",
+          color: "var(--accent-wisteria)",
+        }}
+      >
+        <span className="material-symbols-outlined text-[14px]">search</span>
+        搜索了「{query}」
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Inner Bubble (with favorite) ─── */
+
+function InnerBubble({ content, onFavorite }: { content: string; onFavorite?: () => void }) {
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handlePointerDown = () => {
+    if (!onFavorite) return;
+    longPressRef.current = setTimeout(() => setShowFavMenu(true), 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col items-start gap-2"
+    >
+      <details className="w-full max-w-[85%] group" open>
+        <summary className="flex items-center gap-1.5 px-1 cursor-pointer list-none italic select-none">
+          <span
+            className="material-symbols-outlined text-[12px]"
+            style={{ color: "var(--accent-wisteria)" }}
+          >
+            chat_bubble
+          </span>
+          <span className="text-[11px]" style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}>
+            心声
+          </span>
+          <span
+            className="material-symbols-outlined text-[12px] transition-transform group-open:rotate-180"
+            style={{ color: "var(--text-faint)", opacity: 0.4 }}
+          >
+            expand_more
+          </span>
+        </summary>
+        <div
+          className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap select-none"
+          style={{
+            background: "rgba(255,255,255,0.4)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            fontFamily: "var(--font-serif-sc)",
+            color: "var(--text-deep)",
+            lineHeight: "1.6",
+            fontSize: "12.5px",
+            cursor: onFavorite ? "pointer" : "default",
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onContextMenu={(e) => {
+            if (onFavorite) {
+              e.preventDefault();
+              setShowFavMenu(true);
+            }
+          }}
+        >
+          {content}
+        </div>
+      </details>
+      <AnimatePresence>
+        {showFavMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ActionPill
+              onClick={() => {
+                setShowFavMenu(false);
+                onFavorite?.();
+              }}
+            >
+              ⭐ 收藏这句心声
+            </ActionPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -48,6 +48,7 @@ export async function POST(req: Request) {
   const savedMemories: SavedMemory[] = [];
   const savedFavorites: SavedFavorite[] = [];
   let bedroomInvite: string | null = null;
+  let searchQuery: string | null = null;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -220,6 +221,7 @@ export async function POST(req: Request) {
         } else if (tc.function.name === "web_search") {
           try {
             const args = JSON.parse(tc.function.arguments);
+            searchQuery = args.query;
             if (!config.tavilyKey) {
               result = JSON.stringify({ ok: false, error: "未配置 Tavily API Key，请到设置页填写" });
             } else {
@@ -323,6 +325,7 @@ export async function POST(req: Request) {
       ...(savedMemories.length > 0 ? { savedMemories } : {}),
       ...(savedFavorites.length > 0 ? { savedFavorites } : {}),
       ...(bedroomInvite ? { bedroomInvite } : {}),
+      ...(searchQuery ? { searchQuery } : {}),
     });
   }
 
