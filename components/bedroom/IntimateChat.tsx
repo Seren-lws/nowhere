@@ -8,6 +8,11 @@ import {
   SAVE_MEMORY_TOOL,
   SAVE_FAVORITE_TOOL,
   WRITE_DIARY_TOOL,
+  SAVE_TIMELINE_TOOL,
+  WEB_SEARCH_TOOL,
+  SET_REMINDER_TOOL,
+  SEND_VOICE_TOOL,
+  REQUEST_PERSONALITY_CHANGE_TOOL,
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
@@ -194,7 +199,7 @@ export function IntimateChat() {
         activeSession.presets ?? {},
         activeSession.transition_context,
       );
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL], "bedroom");
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL], "bedroom");
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -203,18 +208,27 @@ export function IntimateChat() {
 
       if (resp.savedMemories && resp.savedMemories.length > 0) {
         await delay(150);
-        acc.push({ role: "memory", content: "", ts: t++, memories: resp.savedMemories });
+        const memMsg: ChatMessage = { role: "memory", content: "", ts: t++, memories: resp.savedMemories };
+        acc.push(memMsg);
         setMessages([...acc]);
+        saveMsg(activeSessionId, "memory", JSON.stringify({ memories: resp.savedMemories })).then((dbId) => { memMsg.dbId = dbId; });
       }
 
       if (resp.savedFavorites && resp.savedFavorites.length > 0) {
         await delay(150);
-        acc.push({
-          role: "fav-notify",
-          content: resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话",
-          ts: t++,
-        });
+        const favContent = resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话";
+        const favMsg: ChatMessage = { role: "fav-notify", content: favContent, ts: t++ };
+        acc.push(favMsg);
         setMessages([...acc]);
+        saveMsg(activeSessionId, "fav-notify", favContent).then((dbId) => { favMsg.dbId = dbId; });
+      }
+
+      if (resp.searchQuery) {
+        await delay(150);
+        const searchMsg: ChatMessage = { role: "search-notify", content: resp.searchQuery, ts: t++ };
+        acc.push(searchMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "search-notify", resp.searchQuery).then((dbId) => { searchMsg.dbId = dbId; });
       }
 
       if (inner) {
@@ -231,6 +245,49 @@ export function IntimateChat() {
         acc.push(asstMsg);
         setMessages([...acc]);
         saveMsg(activeSessionId, "assistant", p).then((dbId) => { asstMsg.dbId = dbId; });
+      }
+
+      if (resp.diaryWritten) {
+        await delay(150);
+        const diaryMsg: ChatMessage = { role: "tool-notify", content: "diary", ts: t++ };
+        acc.push(diaryMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "tool-notify", "diary").then((dbId) => { diaryMsg.dbId = dbId; });
+      }
+
+      if (resp.timelineEvent) {
+        await delay(150);
+        const tlContent = `timeline:${resp.timelineEvent}`;
+        const tlMsg: ChatMessage = { role: "tool-notify", content: tlContent, ts: t++ };
+        acc.push(tlMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "tool-notify", tlContent).then((dbId) => { tlMsg.dbId = dbId; });
+      }
+
+      if (resp.reminderSet) {
+        await delay(150);
+        const remContent = `reminder:${resp.reminderSet}`;
+        const remMsg: ChatMessage = { role: "tool-notify", content: remContent, ts: t++ };
+        acc.push(remMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "tool-notify", remContent).then((dbId) => { remMsg.dbId = dbId; });
+      }
+
+      if (resp.personalityRequest) {
+        await delay(150);
+        const perMsg: ChatMessage = { role: "tool-notify", content: "personality", ts: t++ };
+        acc.push(perMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "tool-notify", "personality").then((dbId) => { perMsg.dbId = dbId; });
+      }
+
+      if (resp.voiceMessage) {
+        await delay(300);
+        const voiceContent = JSON.stringify({ text: resp.voiceMessage.text, audioUrl: resp.voiceMessage.audioUrl });
+        const voiceMsg: ChatMessage = { role: "voice", content: voiceContent, ts: t++ };
+        acc.push(voiceMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "voice", voiceContent).then((dbId) => { voiceMsg.dbId = dbId; });
       }
     } catch (e) {
       setSending(false);
@@ -281,6 +338,27 @@ export function IntimateChat() {
           content: text,
           owner: "user",
           metadata: { date: dateStr, room: "bedroom" },
+        }),
+      });
+      setFavToast(true);
+      setTimeout(() => setFavToast(false), 1500);
+    } catch {}
+  };
+
+  const favoriteVoice = async (data: string, ts: number) => {
+    try {
+      const parsed = JSON.parse(data);
+      const d = new Date(ts);
+      const tokyoDate = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
+      const dateStr = `${tokyoDate.getFullYear()}-${String(tokyoDate.getMonth() + 1).padStart(2, "0")}-${String(tokyoDate.getDate()).padStart(2, "0")}`;
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "bedroom",
+          content: parsed.text || "",
+          owner: "user",
+          metadata: { date: dateStr, room: "bedroom", type: "voice", audioUrl: parsed.audioUrl },
         }),
       });
       setFavToast(true);
@@ -567,6 +645,12 @@ export function IntimateChat() {
                   <DarkMemoryTag memories={m.memories} />
                 ) : m.role === "fav-notify" ? (
                   <DarkFavNotify text={m.content} />
+                ) : m.role === "search-notify" ? (
+                  <DarkSearchNotifyCard query={m.content} />
+                ) : m.role === "voice" ? (
+                  <DarkVoiceBubble data={m.content} onFavorite={() => favoriteVoice(m.content, m.ts)} />
+                ) : m.role === "tool-notify" ? (
+                  <DarkToolNotifyCard payload={m.content} />
                 ) : (
                   <DarkBubble
                     role={m.role}
@@ -575,7 +659,11 @@ export function IntimateChat() {
                     onSelect={m.role === "user" && !sending ? () => setSelectedTs(selectedTs === m.ts ? null : m.ts) : undefined}
                     onEditResend={() => editResend(m.ts)}
                     onRetry={() => retryFrom(m.ts)}
-                    onFavorite={m.role === "assistant" ? () => favoriteChat(m.content, m.ts) : undefined}
+                    onFavorite={
+                      m.role === "assistant" || m.role === "inner"
+                        ? () => favoriteChat(m.content, m.ts)
+                        : undefined
+                    }
                   />
                 )}
               </div>
@@ -898,6 +986,11 @@ function DarkBubble({
   role: ChatMessage["role"]; content: string; selected?: boolean;
   onSelect?: () => void; onEditResend?: () => void; onRetry?: () => void; onFavorite?: () => void;
 }) {
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handlePointerDown = () => { if (!onFavorite) return; longPressRef.current = setTimeout(() => setShowFavMenu(true), 500); };
+  const handlePointerUp = () => { if (longPressRef.current) clearTimeout(longPressRef.current); };
+
   if (role === "user") {
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-end gap-2">
@@ -924,27 +1017,36 @@ function DarkBubble({
 
   if (role === "inner") {
     return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-start">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-start gap-2">
         <details className="w-full max-w-[85%] group" open>
           <summary className="flex items-center gap-1.5 px-1 cursor-pointer list-none italic select-none">
             <span className="material-symbols-outlined text-[12px]" style={{ color: "rgba(230,190,210,0.5)" }}>chat_bubble</span>
             <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-serif-sc)" }}>心声</span>
             <span className="material-symbols-outlined text-[12px] transition-transform group-open:rotate-180" style={{ color: "rgba(255,255,255,0.2)" }}>expand_more</span>
           </summary>
-          <div className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", lineHeight: "1.6", fontSize: "12.5px" }}>
+          <div
+            className="mt-1.5 rounded-xl px-3 py-2 italic whitespace-pre-wrap select-none"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", lineHeight: "1.6", fontSize: "12.5px", cursor: onFavorite ? "pointer" : "default" }}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onContextMenu={(e) => { if (onFavorite) { e.preventDefault(); setShowFavMenu(true); } }}
+          >
             {content}
           </div>
         </details>
+        <AnimatePresence>
+          {showFavMenu && (
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+              <DarkPill onClick={() => { setShowFavMenu(false); onFavorite?.(); }}>⭐ 收藏这句心声</DarkPill>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     );
   }
 
   // assistant
-  const [showFavMenu, setShowFavMenu] = useState(false);
-  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const handlePointerDown = () => { if (!onFavorite) return; longPressRef.current = setTimeout(() => setShowFavMenu(true), 500); };
-  const handlePointerUp = () => { if (longPressRef.current) clearTimeout(longPressRef.current); };
-
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-start gap-2">
       <div
@@ -1055,6 +1157,205 @@ function DarkModeSwitcher({ mode, setMode }: { mode: ChatMode; setMode: (m: Chat
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* ─── Voice Bubble (dark) ─── */
+
+function DarkVoiceBubble({ data, onFavorite }: { data: string; onFavorite?: () => void }) {
+  const [playing, setPlaying] = useState(false);
+  const [showText, setShowText] = useState(false);
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  let parsed: { text: string; audioUrl: string };
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return null;
+  }
+
+  const cleanText = parsed.text.replace(/\[(softly|teasing|laughs softly|rushed|drawn out|pause|long pause)\]\s*/gi, "");
+
+  const togglePlay = () => {
+    if (!audioRef.current) {
+      const audio = new Audio(parsed.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => setPlaying(false);
+      audio.onerror = () => setPlaying(false);
+    }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  const handlePointerDown = () => {
+    if (!onFavorite) return;
+    longPressRef.current = setTimeout(() => setShowFavMenu(true), 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-start gap-2">
+      <div
+        className="rounded-xl overflow-hidden min-w-[65%] max-w-[80%] select-none"
+        style={{
+          background: "rgba(230,190,210,0.06)",
+          border: "1px solid rgba(230,190,210,0.15)",
+          cursor: onFavorite ? "pointer" : "default",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onContextMenu={(e) => { if (onFavorite) { e.preventDefault(); setShowFavMenu(true); } }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{ background: "linear-gradient(135deg, rgba(230,190,210,0.4), rgba(200,160,190,0.5))", boxShadow: "0 2px 8px rgba(230,190,210,0.2)" }}
+          >
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "white", fontVariationSettings: "'FILL' 1" }}>
+              {playing ? "pause" : "play_arrow"}
+            </span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              {playing && (
+                <div className="flex items-end gap-0.5 h-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-[3px] rounded-full"
+                      style={{ background: "rgba(230,190,210,0.7)" }}
+                      animate={{ height: [4, 12 + Math.random() * 4, 6, 14, 4] }}
+                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
+                    />
+                  ))}
+                </div>
+              )}
+              {!playing && (
+                <div className="flex items-end gap-0.5 h-4">
+                  {[8, 12, 6, 14, 10, 8, 4].map((h, i) => (
+                    <div key={i} className="w-[3px] rounded-full" style={{ background: "rgba(230,190,210,0.4)", height: h, opacity: 0.4 }} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setShowText(!showText)}
+              className="mt-1 text-[11px] transition-colors"
+              style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-serif-sc)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              {showText ? "收起文字" : "查看文字"}
+            </button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {showText && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+              <div className="px-4 pb-3 pt-1" style={{ borderTop: "1px solid rgba(230,190,210,0.1)" }}>
+                <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}>
+                  {cleanText}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <AnimatePresence>
+        {showFavMenu && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+            <DarkPill onClick={() => { setShowFavMenu(false); onFavorite?.(); }}>⭐ 收藏这段语音</DarkPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ─── Search Notify Card (dark) ─── */
+
+function DarkSearchNotifyCard({ query }: { query: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex justify-center">
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+        style={{ background: "rgba(180,170,220,0.1)", border: "1px solid rgba(180,170,220,0.2)", fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "rgba(180,170,220,0.8)" }}
+      >
+        <span className="material-symbols-outlined text-[14px]">search</span>
+        搜索了「{query}」
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Tool Notify Card (dark) ─── */
+
+const DARK_TOOL_NOTIFY_CONFIG: Record<string, { icon: string; color: string; bg: string; border: string }> = {
+  diary: { icon: "auto_stories", color: "rgba(230,190,210,0.8)", bg: "rgba(230,190,210,0.08)", border: "rgba(230,190,210,0.15)" },
+  timeline: { icon: "timeline", color: "rgba(180,170,220,0.8)", bg: "rgba(180,170,220,0.08)", border: "rgba(180,170,220,0.15)" },
+  reminder: { icon: "alarm", color: "rgba(170,210,200,0.8)", bg: "rgba(170,210,200,0.08)", border: "rgba(170,210,200,0.15)" },
+  personality: { icon: "psychology", color: "rgba(230,190,210,0.8)", bg: "rgba(230,190,210,0.08)", border: "rgba(230,190,210,0.15)" },
+};
+
+function DarkToolNotifyCard({ payload }: { payload: string }) {
+  const router = useRouter();
+
+  let type = payload;
+  let detail = "";
+  const colonIdx = payload.indexOf(":");
+  if (colonIdx > 0) {
+    type = payload.slice(0, colonIdx);
+    detail = payload.slice(colonIdx + 1);
+  }
+
+  const cfg = DARK_TOOL_NOTIFY_CONFIG[type] ?? DARK_TOOL_NOTIFY_CONFIG.diary;
+
+  const labels: Record<string, string> = {
+    diary: "他写了一篇日记",
+    timeline: `记录了一个时刻：${detail}`,
+    reminder: `设了提醒：${detail}`,
+    personality: "他提交了一个人格变更申请",
+  };
+
+  const clickTargets: Record<string, string> = {
+    diary: "/study/his-drawer/diary",
+    timeline: "/vault/timeline",
+  };
+
+  const label = labels[type] ?? payload;
+  const target = clickTargets[type];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex justify-center">
+      {target ? (
+        <button
+          onClick={() => router.push(target)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95"
+          style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: cfg.color }}
+        >
+          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
+          {label}
+          <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+        </button>
+      ) : (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+          style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: cfg.color }}
+        >
+          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
+          {label}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
