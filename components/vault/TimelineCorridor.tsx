@@ -192,7 +192,9 @@ export function TimelineCorridor() {
     <>
       {/* Dark galaxy background — covers MemoryShell's light gradient */}
       <div className="fixed inset-0 -z-[8]" style={{
-        background: "radial-gradient(ellipse at 50% 30%, #1a1030 0%, #0d0d20 40%, #060610 100%)",
+        backgroundImage: "url('/timeline/galaxy.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
       }} />
       <div className="fixed inset-0 -z-[7] pointer-events-none" style={{
         background: "radial-gradient(circle at 50% 50%, rgba(103,87,126,0.12), rgba(123,84,85,0.06), transparent)",

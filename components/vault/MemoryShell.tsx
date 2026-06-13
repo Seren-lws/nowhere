@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { supabase } from "@/lib/supabase";
 import { MemoryTabs } from "./MemoryTabs";
@@ -30,6 +30,8 @@ function useBubbles() {
 
 export function MemoryShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isTimeline = pathname.startsWith("/vault/timeline");
   const bubbles = useBubbles();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -102,33 +104,37 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed inset-0 text-[var(--text-deep)]">
-      {/* Breathing gradient background */}
-      <div
-        className="fixed inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(-45deg, #fdf8f8, #e3cffd, #d4a5a5, #f7f2f2)",
-          backgroundSize: "400% 400%",
-          animation: "gradient-x 15s ease infinite",
-        }}
-      />
+      {/* Breathing gradient background — hidden on timeline (it has its own dark bg) */}
+      {!isTimeline && (
+        <div
+          className="fixed inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(-45deg, #fdf8f8, #e3cffd, #d4a5a5, #f7f2f2)",
+            backgroundSize: "400% 400%",
+            animation: "gradient-x 15s ease infinite",
+          }}
+        />
+      )}
 
-      {/* Rising bubbles */}
-      <div className="fixed inset-0 -z-[5] overflow-hidden pointer-events-none">
-        {bubbles.map((b, i) => (
-          <div
-            key={i}
-            className="bubble"
-            style={{
-              width: b.size,
-              height: b.size,
-              left: `${b.left}%`,
-              animation: `bubble-rise ${b.dur}s linear infinite`,
-              animationDelay: `${b.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Rising bubbles — hidden on timeline */}
+      {!isTimeline && (
+        <div className="fixed inset-0 -z-[5] overflow-hidden pointer-events-none">
+          {bubbles.map((b, i) => (
+            <div
+              key={i}
+              className="bubble"
+              style={{
+                width: b.size,
+                height: b.size,
+                left: `${b.left}%`,
+                animation: `bubble-rise ${b.dur}s linear infinite`,
+                animationDelay: `${b.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Header */}
       <nav
