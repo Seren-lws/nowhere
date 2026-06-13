@@ -23,7 +23,7 @@ export interface ChatResponse {
   timelineEvent?: string;
   reminderSet?: string;
   personalityRequest?: boolean;
-  voiceMessage?: { text: string; audioBase64: string };
+  voiceMessage?: { text: string; audioUrl: string };
 }
 
 export async function sendChat(

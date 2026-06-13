@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   let timelineEvent: string | null = null;
   let reminderSet: string | null = null;
   let personalityRequest = false;
-  let voiceMessage: { text: string; audioBase64: string } | null = null;
+  let voiceMessage: { text: string; audioUrl: string } | null = null;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -318,8 +318,26 @@ export async function POST(req: Request) {
                 result = JSON.stringify({ ok: false, error: `语音生成失败 (${ttsRes.status}): ${errText.slice(0, 200)}` });
               } else {
                 const audioBuffer = await ttsRes.arrayBuffer();
-                const audioBase64 = Buffer.from(audioBuffer).toString("base64");
-                voiceMessage = { text: voiceText, audioBase64 };
+                const fileName = `voice_${Date.now()}.mp3`;
+                const { error: uploadErr } = await supabase.storage
+                  .from("voice-messages")
+                  .upload(fileName, Buffer.from(audioBuffer), {
+                    contentType: "audio/mpeg",
+                    upsert: false,
+                  });
+                if (uploadErr) {
+                  result = JSON.stringify({ ok: false, error: `语音上传失败: ${uploadErr.message}` });
+                } else {
+                  const { data: urlData } = supabase.storage
+                    .from("voice-messages")
+                    .getPublicUrl(fileName);
+                  const audioUrl = urlData.publicUrl;
+
+                  const { saveChatMessage } = await import("@/lib/brain/db");
+                  await saveChatMessage("voice", JSON.stringify({ text: voiceText, audioUrl }), chatRoom || "living-room");
+
+                  voiceMessage = { text: voiceText, audioUrl };
+                }
               }
             }
           } catch (e) {

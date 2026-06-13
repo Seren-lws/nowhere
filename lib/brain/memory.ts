@@ -60,7 +60,7 @@ export function clearHistory(): void {
 }
 
 export async function saveMessageToDb(
-  role: "user" | "assistant" | "inner",
+  role: "user" | "assistant" | "inner" | "voice",
   content: string,
 ): Promise<string> {
   return saveChatMessage(role, content);
@@ -82,7 +82,7 @@ export async function migrateLocalToDb(): Promise<number> {
 
   let migrated = 0;
   for (const m of local) {
-    if (m.dbId || (m.role !== "user" && m.role !== "assistant" && m.role !== "inner")) continue;
+    if (m.dbId || (m.role !== "user" && m.role !== "assistant" && m.role !== "inner" && m.role !== "voice")) continue;
     try {
       await saveChatMessage(m.role, m.content);
       migrated++;

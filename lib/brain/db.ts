@@ -25,7 +25,7 @@ export interface MemoryItem {
 
 export interface DbChatMessage {
   id: string;
-  role: "user" | "assistant" | "inner";
+  role: "user" | "assistant" | "inner" | "voice";
   content: string;
   room: string;
   created_at: string;
@@ -41,7 +41,7 @@ export async function fetchPersonalityLayers(): Promise<PersonalityLayer[]> {
 }
 
 export async function saveChatMessage(
-  role: "user" | "assistant" | "inner",
+  role: "user" | "assistant" | "inner" | "voice",
   content: string,
   room = "living-room",
 ): Promise<string> {

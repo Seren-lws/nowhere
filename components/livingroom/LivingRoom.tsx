@@ -292,8 +292,9 @@ export function LivingRoom() {
 
       if (resp.voiceMessage) {
         await delay(300);
-        const audioUrl = `data:audio/mpeg;base64,${resp.voiceMessage.audioBase64}`;
-        acc.push({ role: "voice", content: JSON.stringify({ text: resp.voiceMessage.text, audioUrl }), ts: t++ });
+        const voiceContent = JSON.stringify({ text: resp.voiceMessage.text, audioUrl: resp.voiceMessage.audioUrl });
+        const voiceMsg: ChatMessage = { role: "voice", content: voiceContent, ts: t++ };
+        acc.push(voiceMsg);
         setMessages([...acc]);
         saveHistory(acc);
       }
