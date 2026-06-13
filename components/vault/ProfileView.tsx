@@ -397,7 +397,7 @@ export function ProfileView() {
                     <div className="flex justify-between items-start">
                       <div className="flex-1 pr-4">
                         <h2
-                          className="text-[18px] font-medium leading-relaxed"
+                          className="text-[14px] font-medium leading-relaxed"
                           style={{
                             fontFamily: "var(--font-serif-sc)",
                             color: "var(--text-deep)",

@@ -488,7 +488,7 @@ export function TimelineCorridor() {
                 className="inline-block px-6 py-2 rounded-full text-[13px]"
                 style={{
                   fontFamily: "var(--font-serif-sc)",
-                  color: "rgba(255,218,217,0.5)",
+                  color: "rgba(255,255,255,0.7)",
                   background: "rgba(255,255,255,0.05)",
                   border: "1px dashed rgba(255,218,217,0.2)",
                 }}

@@ -362,7 +362,7 @@ function ConflictBody({
           format_quote
         </span>
         <p
-          className="flex-1 text-[16px]"
+          className="flex-1 text-[13px]"
           style={{
             fontFamily: "var(--font-serif-sc)",
             color: "var(--text-deep)",
@@ -403,7 +403,7 @@ function ConflictBody({
           format_quote
         </span>
         <p
-          className="flex-1 text-[16px]"
+          className="flex-1 text-[13px]"
           style={{
             fontFamily: "var(--font-serif-sc)",
             color: "var(--text-deep)",
@@ -457,7 +457,7 @@ function NormalBody({ log }: { log: GardenerLog }) {
         <div className="flex gap-3 items-start">
           <div className="w-1 bg-[rgba(103,87,126,0.3)] rounded-full self-stretch" />
           <p
-            className="text-[16px] leading-6"
+            className="text-[13px] leading-5"
             style={{
               fontFamily: "var(--font-serif-sc)",
               color: "var(--text-mid)",
@@ -468,7 +468,7 @@ function NormalBody({ log }: { log: GardenerLog }) {
         </div>
       ) : (
         <p
-          className="text-[16px] leading-6"
+          className="text-[13px] leading-5"
           style={{
             fontFamily: "var(--font-serif-sc)",
             color: "var(--text-mid)",
