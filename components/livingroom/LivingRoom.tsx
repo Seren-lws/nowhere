@@ -50,6 +50,7 @@ export function LivingRoom() {
   const [selectedTs, setSelectedTs] = useState<number | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
+  const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
   const [atBottom, setAtBottom] = useState(true);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -219,7 +220,9 @@ export function LivingRoom() {
         if (p?.type === "image" && p.imageUrl) {
           userContent = [
             { type: "image_url", image_url: { url: p.imageUrl } },
-            { type: "text", text: p.caption || "她发了一张图片给你看。仔细看看图片内容，然后自然地回应她。" },
+            { type: "text", text: p.caption
+              ? `她发了一张图片，并说：「${p.caption}」\n仔细看看图片内容，结合她说的话自然地回应。`
+              : "她发了一张图片给你看。仔细看看图片内容，然后自然地回应她。" },
           ];
         }
       } catch {}
@@ -319,8 +322,47 @@ export function LivingRoom() {
   };
 
   const send = async () => {
+    if (sending || !settings) return;
     const text = input.trim();
-    if (!text || sending || !settings) return;
+
+    if (pendingImage) {
+      const caption = text;
+      const imgFile = pendingImage.file;
+      URL.revokeObjectURL(pendingImage.previewUrl);
+      setPendingImage(null);
+      setInput("");
+      setSelectedTs(null);
+      setShowPlus(false);
+
+      const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${imgFile.name.split(".").pop() || "jpg"}`;
+      setSending(true);
+      const { error: uploadErr } = await supabase.storage
+        .from("chat-images")
+        .upload(fileName, imgFile, { contentType: imgFile.type });
+      if (uploadErr) {
+        setSending(false);
+        setError(`图片上传失败: ${uploadErr.message}`);
+        return;
+      }
+      const { data: urlData } = supabase.storage
+        .from("chat-images")
+        .getPublicUrl(fileName);
+
+      const content = JSON.stringify({ type: "image", imageUrl: urlData.publicUrl, ...(caption ? { caption } : {}) });
+      const msg: ChatMessage = { role: "user", content, ts: Date.now() };
+      const acc = [...messages, msg];
+      setMessages(acc);
+      saveHistory(acc);
+      setSending(false);
+      saveMessageToDb("user", content).then((dbId) => {
+        msg.dbId = dbId;
+        saveHistory(acc);
+      }).catch(() => {});
+      await requestReply(acc);
+      return;
+    }
+
+    if (!text) return;
     setSelectedTs(null);
     const acc = [...messages, { role: "user", content: text, ts: Date.now() } as ChatMessage];
     setMessages(acc);
@@ -382,36 +424,13 @@ export function LivingRoom() {
     router.push(`/bedroom/intimate?from=livingroom&context=${ctx}`);
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !settings) return;
+    if (!file) return;
     e.target.value = "";
     setShowPlus(false);
-
-    const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${file.name.split(".").pop() || "jpg"}`;
-    const { error: uploadErr } = await supabase.storage
-      .from("chat-images")
-      .upload(fileName, file, { contentType: file.type });
-
-    if (uploadErr) {
-      setError(`图片上传失败: ${uploadErr.message}`);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("chat-images")
-      .getPublicUrl(fileName);
-
-    const content = JSON.stringify({ type: "image", imageUrl: urlData.publicUrl });
-    const msg: ChatMessage = { role: "user", content, ts: Date.now() };
-    const acc = [...messages, msg];
-    setMessages(acc);
-    saveHistory(acc);
-    saveMessageToDb("user", content).then((dbId) => {
-      msg.dbId = dbId;
-      saveHistory(acc);
-    }).catch(() => {});
-    await requestReply(acc);
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage({ file, previewUrl: URL.createObjectURL(file) });
   };
 
   const clearChat = () => {
@@ -698,6 +717,54 @@ export function LivingRoom() {
             )}
           </AnimatePresence>
 
+          {/* Image preview */}
+          <AnimatePresence>
+            {pendingImage && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-5 pt-3 pb-2 flex items-start gap-3">
+                  <div className="relative">
+                    <img
+                      src={pendingImage.previewUrl}
+                      alt="待发送"
+                      className="w-16 h-16 object-cover rounded-xl"
+                      style={{
+                        boxShadow: "4px 4px 8px #e0dbdb, -4px -4px 8px #ffffff",
+                        border: "1px solid rgba(255,255,255,0.4)",
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        URL.revokeObjectURL(pendingImage.previewUrl);
+                        setPendingImage(null);
+                      }}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{
+                        background: "rgba(123,84,85,0.8)",
+                        color: "white",
+                        fontSize: "12px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <span
+                    className="text-[12px] pt-1"
+                    style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}
+                  >
+                    可以在下方输入文字说明，一起发送
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="px-5 pt-3 pb-8 flex items-center gap-3">
           <button
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full neu-flat active:scale-95 transition-transform"
@@ -724,7 +791,7 @@ export function LivingRoom() {
                 }
               }}
               rows={1}
-              placeholder={ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
+              placeholder={pendingImage ? "添加文字说明（可选）" : ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
               disabled={!ready || sending}
               className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[16px] resize-none disabled:opacity-60"
               style={{
@@ -738,8 +805,8 @@ export function LivingRoom() {
 
           <button
             type="button"
-            onClick={() => { send(); setShowPlus(false); }}
-            disabled={!ready || sending || !input.trim()}
+            onClick={send}
+            disabled={!ready || sending || (!input.trim() && !pendingImage)}
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, #eddcff, #ffdad9)" }}
           >
