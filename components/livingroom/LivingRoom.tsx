@@ -935,6 +935,8 @@ function Bubble({
   onRetry?: () => void;
   onFavorite?: () => void;
 }) {
+  const urls = extractUrls(content);
+
   if (role === "user") {
     return (
       <motion.div
@@ -960,6 +962,9 @@ function Bubble({
         >
           {content}
         </div>
+        {urls.map((u) => (
+          <LinkCard key={u} url={u} />
+        ))}
         {selected && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
@@ -1020,6 +1025,9 @@ function Bubble({
       >
         {content}
       </div>
+      {urls.map((u) => (
+        <LinkCard key={u} url={u} />
+      ))}
       <AnimatePresence>
         {showFavMenu && (
           <motion.div
@@ -1730,8 +1738,6 @@ function PlusPanel({ onImage }: { onImage: () => void }) {
   const items = [
     { icon: "image", label: "图片", action: onImage, active: true },
     { icon: "mood", label: "表情", action: () => {}, active: false },
-    { icon: "attach_file", label: "文件", action: () => {}, active: false },
-    { icon: "link", label: "链接", action: () => {}, active: false },
   ];
 
   return (
@@ -1787,6 +1793,147 @@ function PlusPanel({ onImage }: { onImage: () => void }) {
         ))}
       </div>
     </motion.div>
+  );
+}
+
+/* ─── Link Card ─── */
+
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`　-〿、。，！？]+/g;
+
+function extractUrls(text: string): string[] {
+  const matches = text.match(URL_REGEX);
+  if (!matches) return [];
+  return [...new Set(matches)].slice(0, 3);
+}
+
+interface LinkPreview {
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  siteName: string | null;
+}
+
+function LinkCard({ url }: { url: string }) {
+  const [preview, setPreview] = useState<LinkPreview | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+      .then((r) => r.json())
+      .then((data: LinkPreview) => {
+        if (!cancelled) {
+          setPreview(data);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (!loaded) {
+    return (
+      <div
+        className="rounded-xl px-3.5 py-3 max-w-[80%] animate-pulse"
+        style={{
+          background: "rgba(255,255,255,0.5)",
+          border: "1px solid rgba(255,255,255,0.4)",
+          height: 60,
+        }}
+      />
+    );
+  }
+
+  if (!preview?.title && !preview?.description) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block rounded-xl px-3.5 py-2.5 max-w-[80%] no-underline active:scale-[0.98] transition-transform"
+        style={{
+          background: "rgba(255,255,255,0.5)",
+          border: "1px solid rgba(255,255,255,0.4)",
+          boxShadow: "4px 4px 8px #e0dbdb, -4px -4px 8px #ffffff",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="material-symbols-outlined text-[18px]"
+            style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
+          >
+            link
+          </span>
+          <span
+            className="text-[13px] truncate"
+            style={{ color: "var(--text-mid)", fontFamily: "var(--font-serif-sc)" }}
+          >
+            {url}
+          </span>
+        </div>
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-xl overflow-hidden max-w-[80%] no-underline active:scale-[0.98] transition-transform"
+      style={{
+        background: "rgba(255,255,255,0.55)",
+        border: "1px solid rgba(255,255,255,0.4)",
+        boxShadow: "4px 4px 8px #e0dbdb, -4px -4px 8px #ffffff",
+      }}
+    >
+      {preview.image && (
+        <div className="w-full h-[130px] overflow-hidden">
+          <img
+            src={preview.image}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </div>
+      )}
+      <div className="px-3.5 py-2.5">
+        {preview.title && (
+          <div
+            className="text-[14px] font-medium line-clamp-2"
+            style={{ color: "var(--text-deep)", fontFamily: "var(--font-serif-sc)", lineHeight: "20px" }}
+          >
+            {preview.title}
+          </div>
+        )}
+        {preview.description && (
+          <div
+            className="text-[12px] mt-1 line-clamp-2"
+            style={{ color: "var(--text-mid)", fontFamily: "var(--font-serif-sc)", lineHeight: "18px" }}
+          >
+            {preview.description}
+          </div>
+        )}
+        {preview.siteName && (
+          <div
+            className="flex items-center gap-1 mt-1.5"
+          >
+            <span
+              className="material-symbols-outlined text-[12px]"
+              style={{ color: "var(--text-faint)" }}
+            >
+              language
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>
+              {preview.siteName}
+            </span>
+          </div>
+        )}
+      </div>
+    </a>
   );
 }
 
