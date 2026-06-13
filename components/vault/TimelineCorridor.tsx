@@ -126,6 +126,7 @@ export function TimelineCorridor() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
   const [newIcon, setNewIcon] = useState("favorite");
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -539,17 +540,10 @@ export function TimelineCorridor() {
                         </div>
                       ) : (
                         /* ─── Display mode ─── */
-                        <>
-                          {/* Action buttons */}
-                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <button className="active:scale-90 p-1" onClick={() => startEdit(evt)}>
-                              <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(255,255,255,0.3)" }}>edit</span>
-                            </button>
-                            <button className="active:scale-90 p-1" onClick={() => deleteEvent(evt.id)}>
-                              <span className="material-symbols-outlined text-[14px]" style={{ color: "rgba(255,255,255,0.3)" }}>close</span>
-                            </button>
-                          </div>
-
+                        <div
+                          className="cursor-pointer"
+                          onClick={() => setActiveId(activeId === evt.id ? null : evt.id)}
+                        >
                           <h3
                             className="text-[15px] font-semibold mb-2"
                             style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.95)" }}
@@ -571,7 +565,53 @@ export function TimelineCorridor() {
                             <span>·</span>
                             <span style={{ fontFamily: "var(--font-serif-sc)" }}>{SOURCE_LABEL[evt.source] ?? evt.source}</span>
                           </div>
-                        </>
+
+                          {/* Action bar — tap to reveal */}
+                          <AnimatePresence>
+                            {activeId === evt.id && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div
+                                  className="mt-3 pt-3 flex gap-2"
+                                  style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
+                                    style={{
+                                      fontFamily: "var(--font-serif-sc)",
+                                      color: "rgba(255,255,255,0.7)",
+                                      background: "rgba(255,255,255,0.1)",
+                                      border: "1px solid rgba(255,255,255,0.15)",
+                                    }}
+                                    onClick={() => startEdit(evt)}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                                    编辑
+                                  </button>
+                                  <button
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
+                                    style={{
+                                      fontFamily: "var(--font-serif-sc)",
+                                      color: "rgba(255,255,255,0.7)",
+                                      background: "rgba(255,255,255,0.1)",
+                                      border: "1px solid rgba(255,255,255,0.15)",
+                                    }}
+                                    onClick={() => deleteEvent(evt.id)}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                    删除
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       )}
                     </motion.div>
                   </div>
