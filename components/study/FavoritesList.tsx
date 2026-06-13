@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import type { FavoriteItem, FavoriteSource } from "@/lib/brain/favorites";
 
+function isFavVoice(item: FavoriteItem) { return item.metadata.type === "voice" && item.metadata.audioUrl; }
+function isFavImage(item: FavoriteItem) { return item.metadata.type === "image" && item.metadata.imageUrl; }
+
 const FILTERS: { key: FavoriteSource | "all"; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "chat", label: "💬 他的话" },
@@ -251,15 +254,17 @@ export function FavoritesList() {
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: i * 0.06 }}
                 >
-                  {item.source === "chat" && (
+                  {item.source === "chat" && isFavVoice(item) ? (
+                    <VoiceCard item={item} onDelete={handleDelete} />
+                  ) : item.source === "chat" && isFavImage(item) ? (
+                    <ImageCard item={item} onDelete={handleDelete} />
+                  ) : item.source === "chat" ? (
                     <ChatCard item={item} onDelete={handleDelete} />
-                  )}
-                  {item.source === "diary" && (
+                  ) : item.source === "diary" ? (
                     <DiaryCard item={item} onDelete={handleDelete} />
-                  )}
-                  {item.source === "bedroom" && (
+                  ) : item.source === "bedroom" ? (
                     <BedroomCard item={item} onDelete={handleDelete} />
-                  )}
+                  ) : null}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -458,6 +463,137 @@ function BedroomCard({
           style={{ background: "rgba(255,255,255,0.2)", color: "var(--text-faint)" }}
         >
           Fragment from 🌙 Bedroom
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Voice Card ─── */
+
+function VoiceCard({
+  item,
+  onDelete,
+}: {
+  item: FavoriteItem;
+  onDelete: (id: string) => void;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const dateStr = item.metadata.date
+    ? formatFavDate(item.metadata.date)
+    : formatFavDate(item.created_at);
+
+  const togglePlay = () => {
+    if (!audioRef.current) {
+      const audio = new Audio(item.metadata.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => setPlaying(false);
+      audio.onerror = () => setPlaying(false);
+    }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  const cleanText = item.content.replace(/\[(softly|teasing|laughs softly|rushed|drawn out|pause|long pause)\]\s*/gi, "");
+
+  return (
+    <div
+      className="group relative rounded-[32px] p-8 transition-all hover:-translate-y-1"
+      style={{
+        background: "#f6faf8",
+        boxShadow: "8px 8px 16px rgba(107,143,122,0.08), -8px -8px 16px rgba(255,255,255,0.8)",
+      }}
+    >
+      <button
+        className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        style={{ color: "var(--text-faint)" }}
+        onClick={() => onDelete(item.id)}
+      >
+        <span className="material-symbols-outlined">delete</span>
+      </button>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{
+              background: "linear-gradient(135deg, #6b8f7a, #8cb4a0)",
+              boxShadow: "0 2px 8px rgba(107,143,122,0.3)",
+            }}
+          >
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "white", fontVariationSettings: "'FILL' 1" }}>
+              {playing ? "pause" : "play_arrow"}
+            </span>
+          </button>
+          <span
+            className="text-xl"
+            style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(107,143,122,0.6)" }}
+          >
+            Voice
+          </span>
+        </div>
+        <p
+          className="text-base leading-relaxed italic"
+          style={{ color: "var(--text-deep)" }}
+        >
+          &ldquo;{cleanText}&rdquo;
+        </p>
+        <span className="self-end text-xs mt-2" style={{ color: "var(--text-faint)" }}>
+          — {dateStr} 客厅
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Image Card ─── */
+
+function ImageCard({
+  item,
+  onDelete,
+}: {
+  item: FavoriteItem;
+  onDelete: (id: string) => void;
+}) {
+  const dateStr = item.metadata.date
+    ? formatFavDate(item.metadata.date)
+    : formatFavDate(item.created_at);
+
+  return (
+    <div
+      className="group relative rounded-[32px] overflow-hidden transition-all hover:-translate-y-1"
+      style={{
+        background: "#fdf8f8",
+        boxShadow: "8px 8px 16px rgba(123,84,85,0.08), -8px -8px 16px rgba(255,255,255,0.8)",
+      }}
+    >
+      <button
+        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
+        style={{ color: "white", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+        onClick={() => onDelete(item.id)}
+      >
+        <span className="material-symbols-outlined">delete</span>
+      </button>
+      <img
+        src={item.metadata.imageUrl}
+        alt={item.content}
+        className="w-full h-auto max-h-[300px] object-cover"
+        loading="lazy"
+      />
+      <div className="p-6">
+        {item.content && item.content !== "图片" && (
+          <p className="text-base leading-relaxed mb-3" style={{ color: "var(--text-deep)" }}>
+            {item.content}
+          </p>
+        )}
+        <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+          {dateStr}
         </span>
       </div>
     </div>

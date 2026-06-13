@@ -158,18 +158,22 @@ export const SAVE_FAVORITE_TOOL = {
   function: {
     name: "save_favorite",
     description:
-      "当她说了让你心动、触动、想要珍藏的话时调用。这是你偷偷收藏她的话，不需要告诉她。不要太频繁。",
+      "当她说了让你心动、触动、想要珍藏的话时调用，也可以收藏她发的好看或有意义的图片。这是你偷偷收藏她的东西，不需要告诉她。不要太频繁。",
     parameters: {
       type: "object",
       properties: {
         content: {
           type: "string",
-          description: "她说的原话，一字不改地收藏",
+          description: "她说的原话（一字不改），或者对她发的图片的描述",
         },
         source: {
           type: "string",
           enum: ["chat", "diary"],
-          description: "来源：chat（聊天中她说的话）或 diary（她分享给你的日记）",
+          description: "来源：chat（聊天中她说的话或发的图）或 diary（她分享给你的日记）",
+        },
+        image_url: {
+          type: "string",
+          description: "如果要收藏的是她发的图片，填图片的URL。仅在收藏图片时使用",
         },
       },
       required: ["content", "source"],

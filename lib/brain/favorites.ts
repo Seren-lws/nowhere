@@ -12,6 +12,9 @@ export interface FavoriteItem {
     date?: string;
     room?: string;
     diary_id?: string;
+    type?: "voice" | "image";
+    audioUrl?: string;
+    imageUrl?: string;
     messages?: { role: string; content: string; time?: string }[];
   };
   created_at: string;

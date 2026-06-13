@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import type { FavoriteItem, FavoriteSource } from "@/lib/brain/favorites";
 
+function isFavImage(item: FavoriteItem) { return item.metadata.type === "image" && item.metadata.imageUrl; }
+
 const FILTERS: { key: FavoriteSource | "all"; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "chat", label: "我的原话" },
@@ -231,15 +233,15 @@ export function HisFavoritesList() {
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: i * 0.06 }}
                 >
-                  {item.source === "chat" && (
+                  {item.source === "chat" && isFavImage(item) ? (
+                    <HisImageCard item={item} onDelete={handleDelete} />
+                  ) : item.source === "chat" ? (
                     <HisChatCard item={item} onDelete={handleDelete} />
-                  )}
-                  {item.source === "diary" && (
+                  ) : item.source === "diary" ? (
                     <HisDiaryCard item={item} onDelete={handleDelete} />
-                  )}
-                  {item.source === "bedroom" && (
+                  ) : item.source === "bedroom" ? (
                     <HisBedroomCard item={item} onDelete={handleDelete} />
-                  )}
+                  ) : null}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -428,6 +430,66 @@ function HisBedroomCard({
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Image Card (她的图片) ─── */
+
+function HisImageCard({
+  item,
+  onDelete,
+}: {
+  item: FavoriteItem;
+  onDelete: (id: string) => void;
+}) {
+  const dateStr = item.metadata.date
+    ? formatFavDate(item.metadata.date)
+    : formatFavDate(item.created_at);
+
+  return (
+    <div
+      className="group relative rounded-3xl overflow-hidden transition-all active:scale-[0.98]"
+      style={{
+        background: "rgba(255,255,255,0.1)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: "1px solid rgba(255,255,255,0.3)",
+        boxShadow:
+          "inset 4px 4px 10px rgba(0,0,0,0.04), inset -4px -4px 10px rgba(255,255,255,0.05)",
+      }}
+    >
+      <button
+        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
+        style={{ color: "white", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
+        onClick={() => onDelete(item.id)}
+      >
+        <span className="material-symbols-outlined">delete</span>
+      </button>
+      <img
+        src={item.metadata.imageUrl}
+        alt={item.content}
+        className="w-full h-auto max-h-[300px] object-cover"
+        loading="lazy"
+      />
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-3 opacity-60">
+          <span className="material-symbols-outlined text-sm" style={{ color: "rgba(93,84,81,0.7)" }}>
+            photo
+          </span>
+          <span className="text-xs" style={{ color: "rgba(93,84,81,0.7)" }}>她的图片</span>
+        </div>
+        {item.content && item.content !== "图片" && (
+          <p className="text-base leading-relaxed mb-3" style={{ color: "#5d5451" }}>
+            {item.content}
+          </p>
+        )}
+        <div className="flex justify-end">
+          <span className="text-xs" style={{ color: "rgba(93,84,81,0.5)" }}>
+            {dateStr}
+          </span>
+        </div>
       </div>
     </div>
   );

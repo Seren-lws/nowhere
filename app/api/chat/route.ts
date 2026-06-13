@@ -171,11 +171,16 @@ export async function POST(req: Request) {
               month: "2-digit",
               day: "2-digit",
             });
+            const favMeta: Record<string, unknown> = { date: tokyoDate, room: chatRoom || "living-room" };
+            if (args.image_url) {
+              favMeta.type = "image";
+              favMeta.imageUrl = args.image_url;
+            }
             await addFavorite({
               source: args.source ?? "chat",
               content: args.content,
               owner: "companion",
-              metadata: { date: tokyoDate, room: chatRoom || "living-room" },
+              metadata: favMeta as { date?: string; room?: string },
             });
             savedFavorites.push({
               content: args.content,

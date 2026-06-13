@@ -53,6 +53,8 @@ export function LivingRoom() {
   const [showMenu, setShowMenu] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
   const [showStickerPanel, setShowStickerPanel] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -444,11 +446,14 @@ export function LivingRoom() {
 
   const [favToast, setFavToast] = useState(false);
 
+  const tokyoDateStr = (ts: number) => {
+    const d = new Date(ts);
+    const t = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  };
+
   const favoriteChat = async (text: string, ts: number) => {
     try {
-      const d = new Date(ts);
-      const tokyoDate = new Date(d.getTime() + (d.getTimezoneOffset() + 540) * 60000);
-      const dateStr = `${tokyoDate.getFullYear()}-${String(tokyoDate.getMonth() + 1).padStart(2, "0")}-${String(tokyoDate.getDate()).padStart(2, "0")}`;
       await fetch("/api/favorites", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -456,7 +461,43 @@ export function LivingRoom() {
           source: "chat",
           content: text,
           owner: "user",
-          metadata: { date: dateStr, room: "living-room" },
+          metadata: { date: tokyoDateStr(ts), room: "living-room" },
+        }),
+      });
+      setFavToast(true);
+      setTimeout(() => setFavToast(false), 1500);
+    } catch {}
+  };
+
+  const favoriteVoice = async (data: string, ts: number) => {
+    try {
+      const parsed = JSON.parse(data);
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "chat",
+          content: parsed.text || "",
+          owner: "user",
+          metadata: { date: tokyoDateStr(ts), room: "living-room", type: "voice", audioUrl: parsed.audioUrl },
+        }),
+      });
+      setFavToast(true);
+      setTimeout(() => setFavToast(false), 1500);
+    } catch {}
+  };
+
+  const favoriteImage = async (data: string, ts: number) => {
+    try {
+      const parsed = JSON.parse(data);
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "chat",
+          content: parsed.caption || "图片",
+          owner: "user",
+          metadata: { date: tokyoDateStr(ts), room: "living-room", type: "image", imageUrl: parsed.imageUrl },
         }),
       });
       setFavToast(true);
@@ -610,11 +651,11 @@ export function LivingRoom() {
                 ) : m.role === "search-notify" ? (
                   <SearchNotifyCard query={m.content} />
                 ) : m.role === "voice" ? (
-                  <VoiceBubble data={m.content} />
+                  <VoiceBubble data={m.content} onFavorite={() => favoriteVoice(m.content, m.ts)} />
                 ) : isStickerMessage(m.content) ? (
                   <StickerBubble data={m.content} align={m.role === "user" ? "right" : "left"} />
                 ) : isImageMessage(m.content) ? (
-                  <ImageBubble data={m.content} />
+                  <ImageBubble data={m.content} onFavorite={() => favoriteImage(m.content, m.ts)} />
                 ) : m.role === "tool-notify" ? (
                   <ToolNotifyCard payload={m.content} />
                 ) : m.role === "bedroom-invite" ? (
@@ -762,7 +803,77 @@ export function LivingRoom() {
               <PlusPanel
                 onImage={() => fileInputRef.current?.click()}
                 onSticker={() => { setShowPlus(false); setShowStickerPanel(true); }}
+                onLink={() => { setShowPlus(false); setShowLinkInput(true); }}
               />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showLinkInput && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="px-5 py-3 flex items-center gap-3"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }}
+                >
+                  <div className="flex-1 relative">
+                    <div className="absolute inset-0 neu-pressed rounded-full -z-10" />
+                    <input
+                      autoFocus
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && linkUrl.trim()) {
+                          const url = linkUrl.trim();
+                          setLinkUrl("");
+                          setShowLinkInput(false);
+                          const msg: ChatMessage = { role: "user", content: url, ts: Date.now() };
+                          const acc = [...messages, msg];
+                          setMessages(acc);
+                          saveHistory(acc);
+                          saveMessageToDb("user", url).then((dbId) => { msg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+                          requestReply(acc);
+                        }
+                      }}
+                      placeholder="粘贴链接地址…"
+                      className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-4 py-2 text-[14px]"
+                      style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (linkUrl.trim()) {
+                        const url = linkUrl.trim();
+                        setLinkUrl("");
+                        setShowLinkInput(false);
+                        const msg: ChatMessage = { role: "user", content: url, ts: Date.now() };
+                        const acc = [...messages, msg];
+                        setMessages(acc);
+                        saveHistory(acc);
+                        saveMessageToDb("user", url).then((dbId) => { msg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+                        requestReply(acc);
+                      }
+                    }}
+                    disabled={!linkUrl.trim()}
+                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full active:scale-95 transition-transform disabled:opacity-30"
+                    style={{ background: "linear-gradient(135deg, #eddcff, #ffdad9)" }}
+                  >
+                    <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--text-deep)" }}>send</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowLinkInput(false); setLinkUrl(""); }}
+                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full active:scale-95 transition-transform"
+                    style={{ background: "rgba(255,255,255,0.5)" }}
+                  >
+                    <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--text-faint)" }}>close</span>
+                  </button>
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -1651,10 +1762,12 @@ function InnerBubble({ content, onFavorite }: { content: string; onFavorite?: ()
 
 /* ─── Voice Bubble ─── */
 
-function VoiceBubble({ data }: { data: string }) {
+function VoiceBubble({ data, onFavorite }: { data: string; onFavorite?: () => void }) {
   const [playing, setPlaying] = useState(false);
   const [showText, setShowText] = useState(false);
+  const [showFavMenu, setShowFavMenu] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   let parsed: { text: string; audioUrl: string };
   try {
@@ -1681,6 +1794,14 @@ function VoiceBubble({ data }: { data: string }) {
     }
   };
 
+  const handlePointerDown = () => {
+    if (!onFavorite) return;
+    longPressRef.current = setTimeout(() => setShowFavMenu(true), 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -1689,12 +1810,17 @@ function VoiceBubble({ data }: { data: string }) {
       className="flex flex-col items-start gap-2"
     >
       <div
-        className="rounded-xl overflow-hidden min-w-[65%] max-w-[80%]"
+        className="rounded-xl overflow-hidden min-w-[65%] max-w-[80%] select-none"
         style={{
           background: "linear-gradient(135deg, rgba(107,143,122,0.12), rgba(140,180,160,0.08))",
           border: "1px solid rgba(107,143,122,0.2)",
           boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+          cursor: onFavorite ? "pointer" : "default",
         }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onContextMenu={(e) => { if (onFavorite) { e.preventDefault(); setShowFavMenu(true); } }}
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <button
@@ -1769,16 +1895,31 @@ function VoiceBubble({ data }: { data: string }) {
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+        {showFavMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ActionPill onClick={() => { setShowFavMenu(false); onFavorite?.(); }}>
+              ⭐ 收藏这段语音
+            </ActionPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
 /* ─── Plus Panel ─── */
 
-function PlusPanel({ onImage, onSticker }: { onImage: () => void; onSticker: () => void }) {
+function PlusPanel({ onImage, onSticker, onLink }: { onImage: () => void; onSticker: () => void; onLink: () => void }) {
   const items = [
     { icon: "image", label: "图片", action: onImage, active: true },
     { icon: "mood", label: "表情", action: onSticker, active: true },
+    { icon: "link", label: "链接", action: onLink, active: true },
   ];
 
   return (
@@ -2117,8 +2258,10 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
   );
 }
 
-function ImageBubble({ data }: { data: string }) {
+function ImageBubble({ data, onFavorite }: { data: string; onFavorite?: () => void }) {
   const [zoomed, setZoomed] = useState(false);
+  const [showFavMenu, setShowFavMenu] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   let parsed: { type: string; imageUrl: string; caption?: string };
   try {
@@ -2126,6 +2269,14 @@ function ImageBubble({ data }: { data: string }) {
   } catch {
     return null;
   }
+
+  const handlePointerDown = () => {
+    if (!onFavorite) return;
+    longPressRef.current = setTimeout(() => setShowFavMenu(true), 500);
+  };
+  const handlePointerUp = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+  };
 
   return (
     <>
@@ -2136,16 +2287,21 @@ function ImageBubble({ data }: { data: string }) {
         className="flex flex-col items-end gap-1"
       >
         <div
-          className="rounded-xl overflow-hidden max-w-[70%] cursor-pointer active:scale-[0.98] transition-transform"
+          className="rounded-xl overflow-hidden max-w-[70%] active:scale-[0.98] transition-transform select-none"
           style={{
             boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+            cursor: "pointer",
           }}
           onClick={() => setZoomed(true)}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onContextMenu={(e) => { if (onFavorite) { e.preventDefault(); setShowFavMenu(true); } }}
         >
           <img
             src={parsed.imageUrl}
             alt="发送的图片"
-            className="w-full h-auto max-h-[300px] object-cover"
+            className="w-full h-auto max-h-[300px] object-cover pointer-events-none"
             loading="lazy"
           />
         </div>
@@ -2164,6 +2320,20 @@ function ImageBubble({ data }: { data: string }) {
             {parsed.caption}
           </div>
         )}
+        <AnimatePresence>
+          {showFavMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ActionPill onClick={() => { setShowFavMenu(false); onFavorite?.(); }}>
+                ⭐ 收藏这张图
+              </ActionPill>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <AnimatePresence>
