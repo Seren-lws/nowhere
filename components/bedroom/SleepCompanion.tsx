@@ -128,7 +128,7 @@ export function SleepCompanion() {
   /* ─── TTS ─── */
 
   async function ttsForMessage(msg: SleepMessage, s: BrainSettings) {
-    if (!s.ttsModel || msg.audioUrl) return;
+    if (!s.elevenLabsKey || !s.elevenLabsVoiceId || msg.audioUrl) return;
     setTtsLoading(msg.id);
     try {
       const res = await fetch("/api/tts", {
@@ -137,10 +137,8 @@ export function SleepCompanion() {
         body: JSON.stringify({
           text: msg.content,
           config: {
-            baseUrl: s.baseUrl,
-            apiKey: s.apiKey,
-            model: s.ttsModel,
-            voice: s.ttsVoice,
+            elevenLabsKey: s.elevenLabsKey,
+            elevenLabsVoiceId: s.elevenLabsVoiceId,
           },
         }),
       });
@@ -272,7 +270,7 @@ export function SleepCompanion() {
   }
 
   const ready = settings ? isChatReady(settings) : false;
-  const ttsReady = settings ? Boolean(settings.ttsModel) : false;
+  const ttsReady = settings ? Boolean(settings.elevenLabsKey && settings.elevenLabsVoiceId) : false;
 
   return (
     <div className="fixed inset-0" style={{ background: "#0d0b1a" }}>

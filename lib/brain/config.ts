@@ -16,10 +16,6 @@ export interface BrainSettings {
   gardenerModel: string;
   /** 语义检索（embedding，P1 启用） */
   embeddingModel: string;
-  /** TTS 模型（MiniMax speech-2.8-turbo 等） */
-  ttsModel: string;
-  /** TTS 音色 ID（MiniMax 预设音色） */
-  ttsVoice: string;
   /** Bark 推送 Device Key（iOS 通知） */
   barkKey: string;
   /** Tavily API Key（联网搜索） */
@@ -36,8 +32,6 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   chatModel: "gpt-4o",
   gardenerModel: "gpt-4o-mini",
   embeddingModel: "text-embedding-3-small",
-  ttsModel: "speech-2.8-turbo",
-  ttsVoice: "male-qn-qingse",
   barkKey: "",
   tavilyKey: "",
   elevenLabsKey: "",

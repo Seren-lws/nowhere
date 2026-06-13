@@ -3,12 +3,9 @@ import { NextResponse } from "next/server";
 interface TTSRequest {
   text: string;
   config: {
-    baseUrl: string;
-    apiKey: string;
-    model: string;
-    voice: string;
+    elevenLabsKey: string;
+    elevenLabsVoiceId: string;
   };
-  speed?: number;
 }
 
 export async function POST(req: Request) {
@@ -19,10 +16,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "请求格式不对" }, { status: 400 });
   }
 
-  const { text, config, speed } = body;
-  if (!config?.baseUrl || !config?.apiKey || !config?.model) {
+  const { text, config } = body;
+  if (!config?.elevenLabsKey || !config?.elevenLabsVoiceId) {
     return NextResponse.json(
-      { error: "还没配置好：请到设置里填中转站、API Key 和 TTS 模型" },
+      { error: "还没配置好：请到设置里填 ElevenLabs API Key 和 Voice ID" },
       { status: 400 },
     );
   }
@@ -30,31 +27,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "没有文本内容" }, { status: 400 });
   }
 
-  const baseUrl = config.baseUrl.replace(/\/+$/, "");
-  const endpoint = `${baseUrl.replace(/\/v1$/, "")}/minimax/v1/t2a_v2`;
-
   try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${config.apiKey}`,
+    const res = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${config.elevenLabsVoiceId}`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": config.elevenLabsKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          text: text.trim(),
+          model_id: "eleven_v3",
+          language_code: "zh",
+          voice_settings: {
+            stability: 0.34,
+            similarity_boost: 0.75,
+            style: 0.84,
+            speed: 1.2,
+          },
+        }),
       },
-      body: JSON.stringify({
-        model: config.model,
-        text: text.trim(),
-        voice_setting: {
-          voice_id: config.voice || "male-qn-qingse",
-          speed: speed ?? 0.9,
-          vol: 1.0,
-          pitch: 0,
-        },
-        audio_setting: {
-          format: "mp3",
-          sample_rate: 32000,
-        },
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errText = await res.text();
@@ -64,28 +58,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = await res.json();
-
-    if (data.base_resp?.status_code && data.base_resp.status_code !== 0) {
-      return NextResponse.json(
-        { error: `TTS 错误: ${data.base_resp.status_msg || "未知错误"}` },
-        { status: 502 },
-      );
-    }
-
-    const audioData = data.data?.audio;
-    if (!audioData) {
-      return NextResponse.json(
-        { error: "TTS 没有返回音频数据" },
-        { status: 502 },
-      );
-    }
-
-    const audioBuffer = Buffer.from(audioData, "hex");
+    const audioBuffer = await res.arrayBuffer();
     return new Response(audioBuffer, {
       headers: {
         "content-type": "audio/mpeg",
-        "content-length": audioBuffer.length.toString(),
+        "content-length": audioBuffer.byteLength.toString(),
         "cache-control": "public, max-age=86400",
       },
     });
