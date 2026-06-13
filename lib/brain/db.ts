@@ -23,9 +23,11 @@ export interface MemoryItem {
   created_at: string;
 }
 
+export type DbChatRole = "user" | "assistant" | "inner" | "voice" | "memory" | "diary-notify" | "fav-notify" | "search-notify" | "tool-notify";
+
 export interface DbChatMessage {
   id: string;
-  role: "user" | "assistant" | "inner" | "voice";
+  role: DbChatRole;
   content: string;
   room: string;
   created_at: string;
@@ -41,7 +43,7 @@ export async function fetchPersonalityLayers(): Promise<PersonalityLayer[]> {
 }
 
 export async function saveChatMessage(
-  role: "user" | "assistant" | "inner" | "voice",
+  role: DbChatRole,
   content: string,
   room = "living-room",
 ): Promise<string> {

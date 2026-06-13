@@ -1,4 +1,4 @@
-import { saveChatMessage, loadChatMessages } from "./db";
+import { saveChatMessage, loadChatMessages, type DbChatRole } from "./db";
 import type { ContentPart } from "./personality";
 
 import type { SavedMemoryInfo } from "./client";
@@ -81,7 +81,7 @@ export function clearHistory(): void {
 }
 
 export async function saveMessageToDb(
-  role: "user" | "assistant" | "inner" | "voice",
+  role: DbChatRole,
   content: string,
 ): Promise<string> {
   return saveChatMessage(role, content);
@@ -89,12 +89,24 @@ export async function saveMessageToDb(
 
 export async function loadHistoryFromDb(): Promise<ChatMessage[]> {
   const rows = await loadChatMessages("living-room", 200);
-  return rows.map((r) => ({
-    role: r.role,
-    content: r.content,
-    ts: new Date(r.created_at).getTime(),
-    dbId: r.id,
-  }));
+  return rows.map((r) => {
+    const msg: ChatMessage = {
+      role: r.role as ChatRole,
+      content: r.content,
+      ts: new Date(r.created_at).getTime(),
+      dbId: r.id,
+    };
+    if (r.role === "memory") {
+      try {
+        const parsed = JSON.parse(r.content);
+        if (parsed.memories) {
+          msg.memories = parsed.memories;
+          msg.content = "";
+        }
+      } catch {}
+    }
+    return msg;
+  });
 }
 
 export async function migrateLocalToDb(): Promise<number> {
@@ -103,9 +115,12 @@ export async function migrateLocalToDb(): Promise<number> {
 
   let migrated = 0;
   for (const m of local) {
-    if (m.dbId || (m.role !== "user" && m.role !== "assistant" && m.role !== "inner" && m.role !== "voice")) continue;
+    if (m.dbId || m.role === "bedroom-invite") continue;
     try {
-      await saveChatMessage(m.role, m.content);
+      const content = m.role === "memory" && m.memories
+        ? JSON.stringify({ memories: m.memories })
+        : m.content;
+      await saveChatMessage(m.role as DbChatRole, content);
       migrated++;
     } catch {
       break;

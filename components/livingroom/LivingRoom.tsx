@@ -125,6 +125,7 @@ export function LivingRoom() {
             saveHistory(next);
             return next;
           });
+          saveMessageToDb("diary-notify", id).then((dbId) => { notif.dbId = dbId; }).catch(() => {});
         }
       }
     } catch {}
@@ -236,23 +237,30 @@ export function LivingRoom() {
 
       if (resp.savedMemories && resp.savedMemories.length > 0) {
         await delay(150);
-        acc.push({ role: "memory", content: "", ts: t++, memories: resp.savedMemories });
+        const memMsg: ChatMessage = { role: "memory", content: "", ts: t++, memories: resp.savedMemories };
+        acc.push(memMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("memory", JSON.stringify({ memories: resp.savedMemories })).then((dbId) => { memMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.savedFavorites && resp.savedFavorites.length > 0) {
         await delay(150);
-        acc.push({ role: "fav-notify", content: resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话", ts: t++ });
+        const favContent = resp.savedFavorites[0].source === "diary" ? "他收藏了你的日记" : "他收藏了你的话";
+        const favMsg: ChatMessage = { role: "fav-notify", content: favContent, ts: t++ };
+        acc.push(favMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("fav-notify", favContent).then((dbId) => { favMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.searchQuery) {
         await delay(150);
-        acc.push({ role: "search-notify", content: resp.searchQuery, ts: t++ });
+        const searchMsg: ChatMessage = { role: "search-notify", content: resp.searchQuery, ts: t++ };
+        acc.push(searchMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("search-notify", resp.searchQuery).then((dbId) => { searchMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (inner) {
@@ -281,30 +289,40 @@ export function LivingRoom() {
 
       if (resp.diaryWritten) {
         await delay(150);
-        acc.push({ role: "tool-notify", content: "diary", ts: t++ });
+        const diaryMsg: ChatMessage = { role: "tool-notify", content: "diary", ts: t++ };
+        acc.push(diaryMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("tool-notify", "diary").then((dbId) => { diaryMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.timelineEvent) {
         await delay(150);
-        acc.push({ role: "tool-notify", content: `timeline:${resp.timelineEvent}`, ts: t++ });
+        const tlContent = `timeline:${resp.timelineEvent}`;
+        const tlMsg: ChatMessage = { role: "tool-notify", content: tlContent, ts: t++ };
+        acc.push(tlMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("tool-notify", tlContent).then((dbId) => { tlMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.reminderSet) {
         await delay(150);
-        acc.push({ role: "tool-notify", content: `reminder:${resp.reminderSet}`, ts: t++ });
+        const remContent = `reminder:${resp.reminderSet}`;
+        const remMsg: ChatMessage = { role: "tool-notify", content: remContent, ts: t++ };
+        acc.push(remMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("tool-notify", remContent).then((dbId) => { remMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.personalityRequest) {
         await delay(150);
-        acc.push({ role: "tool-notify", content: "personality", ts: t++ });
+        const perMsg: ChatMessage = { role: "tool-notify", content: "personality", ts: t++ };
+        acc.push(perMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("tool-notify", "personality").then((dbId) => { perMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.voiceMessage) {
