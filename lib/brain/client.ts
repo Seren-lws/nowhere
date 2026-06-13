@@ -24,6 +24,7 @@ export interface ChatResponse {
   reminderSet?: string;
   personalityRequest?: boolean;
   voiceMessage?: { text: string; audioUrl: string };
+  stickerMessage?: { stickerId: string; url: string; alt: string };
 }
 
 export async function sendChat(

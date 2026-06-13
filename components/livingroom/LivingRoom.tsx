@@ -16,6 +16,7 @@ import {
   SET_REMINDER_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
   SEND_VOICE_TOOL,
+  SEND_STICKER_TOOL,
   INVITE_BEDROOM_TOOL,
   parseReply,
   type ChatMode,
@@ -32,6 +33,7 @@ import {
   type DiaryShareData,
 } from "@/lib/brain/memory";
 import { clearChatMessages } from "@/lib/brain/db";
+import { STICKER_PACKS, ALL_STICKERS } from "@/lib/stickers";
 import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
 import { supabase } from "@/lib/supabase";
 
@@ -50,6 +52,7 @@ export function LivingRoom() {
   const [selectedTs, setSelectedTs] = useState<number | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showPlus, setShowPlus] = useState(false);
+  const [showStickerPanel, setShowStickerPanel] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -228,7 +231,7 @@ export function LivingRoom() {
         }
       } catch {}
       const assembled = await buildMessages(ctx, userContent, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, SEND_STICKER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -333,6 +336,16 @@ export function LivingRoom() {
         setMessages([...acc]);
         saveHistory(acc);
       }
+
+      if (resp.stickerMessage) {
+        await delay(200);
+        const stickerContent = JSON.stringify({ type: "sticker", stickerId: resp.stickerMessage.stickerId, url: resp.stickerMessage.url, alt: resp.stickerMessage.alt });
+        const stickerMsg: ChatMessage = { role: "assistant", content: stickerContent, ts: t++ };
+        acc.push(stickerMsg);
+        setMessages([...acc]);
+        saveHistory(acc);
+        saveMessageToDb("assistant", stickerContent).then((dbId) => { stickerMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+      }
     } catch (e) {
       setSending(false);
       setError(e instanceof Error ? e.message : String(e));
@@ -390,6 +403,21 @@ export function LivingRoom() {
       acc[acc.length - 1].dbId = dbId;
       saveHistory(acc);
     }).catch(() => {});
+    await requestReply(acc);
+  };
+
+  const sendSticker = async (stickerId: string) => {
+    if (sending || !settings) return;
+    const sticker = ALL_STICKERS.find(s => s.id === stickerId);
+    if (!sticker) return;
+    setShowPlus(false);
+    setShowStickerPanel(false);
+    const content = JSON.stringify({ type: "sticker", stickerId: sticker.id, url: sticker.url, alt: sticker.alt });
+    const msg: ChatMessage = { role: "user", content, ts: Date.now() };
+    const acc = [...messages, msg];
+    setMessages(acc);
+    saveHistory(acc);
+    saveMessageToDb("user", content).then((dbId) => { msg.dbId = dbId; saveHistory(acc); }).catch(() => {});
     await requestReply(acc);
   };
 
@@ -583,6 +611,8 @@ export function LivingRoom() {
                   <SearchNotifyCard query={m.content} />
                 ) : m.role === "voice" ? (
                   <VoiceBubble data={m.content} />
+                ) : isStickerMessage(m.content) ? (
+                  <StickerBubble data={m.content} align={m.role === "user" ? "right" : "left"} />
                 ) : isImageMessage(m.content) ? (
                   <ImageBubble data={m.content} />
                 ) : m.role === "tool-notify" ? (
@@ -731,6 +761,17 @@ export function LivingRoom() {
             {showPlus && (
               <PlusPanel
                 onImage={() => fileInputRef.current?.click()}
+                onSticker={() => { setShowPlus(false); setShowStickerPanel(true); }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Sticker panel */}
+          <AnimatePresence>
+            {showStickerPanel && (
+              <StickerPickerPanel
+                onSelect={(id) => sendSticker(id)}
+                onClose={() => setShowStickerPanel(false)}
               />
             )}
           </AnimatePresence>
@@ -1734,10 +1775,10 @@ function VoiceBubble({ data }: { data: string }) {
 
 /* ─── Plus Panel ─── */
 
-function PlusPanel({ onImage }: { onImage: () => void }) {
+function PlusPanel({ onImage, onSticker }: { onImage: () => void; onSticker: () => void }) {
   const items = [
     { icon: "image", label: "图片", action: onImage, active: true },
-    { icon: "mood", label: "表情", action: () => {}, active: false },
+    { icon: "mood", label: "表情", action: onSticker, active: true },
   ];
 
   return (
@@ -1791,6 +1832,70 @@ function PlusPanel({ onImage }: { onImage: () => void }) {
             </span>
           </button>
         ))}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Sticker Picker ─── */
+
+function StickerPickerPanel({ onSelect, onClose }: { onSelect: (id: string) => void; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState(0);
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 280, opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className="overflow-hidden flex flex-col"
+      style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }}
+    >
+      <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+        <div className="flex gap-1">
+          {STICKER_PACKS.map((pack, i) => (
+            <button
+              key={pack.name}
+              onClick={() => setActiveTab(i)}
+              className="px-3 py-1 rounded-lg text-[12px] transition-all"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                background: activeTab === i ? "rgba(123,84,85,0.15)" : "transparent",
+                color: activeTab === i ? "var(--primary)" : "var(--text-faint)",
+                fontWeight: activeTab === i ? 600 : 400,
+              }}
+            >
+              {pack.name}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ color: "var(--text-faint)" }}
+        >
+          <span className="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        <div className="grid grid-cols-4 gap-2">
+          {STICKER_PACKS[activeTab]?.stickers.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => onSelect(s.id)}
+              className="aspect-square rounded-xl overflow-hidden active:scale-90 transition-transform hover:bg-white/30"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+              title={s.alt}
+            >
+              <img
+                src={s.url}
+                alt={s.alt}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </button>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -1946,6 +2051,70 @@ function isImageMessage(content: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isStickerMessage(content: string): boolean {
+  try {
+    const p = JSON.parse(content);
+    return p?.type === "sticker" && !!p.url;
+  } catch {
+    return false;
+  }
+}
+
+function StickerBubble({ data, align }: { data: string; align: "left" | "right" }) {
+  const [zoomed, setZoomed] = useState(false);
+
+  let parsed: { type: string; stickerId: string; url: string; alt: string };
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return null;
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className="cursor-pointer active:scale-95 transition-transform"
+          onClick={() => setZoomed(true)}
+        >
+          <img
+            src={parsed.url}
+            alt={parsed.alt}
+            className="w-[120px] h-[120px] object-cover rounded-xl"
+            loading="lazy"
+          />
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {zoomed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60"
+            onClick={() => setZoomed(false)}
+          >
+            <motion.img
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.5 }}
+              src={parsed.url}
+              alt={parsed.alt}
+              className="max-w-[80vw] max-h-[80vh] object-contain rounded-xl"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 }
 
 function ImageBubble({ data }: { data: string }) {

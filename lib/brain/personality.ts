@@ -3,6 +3,7 @@ import type { PersonalityLayer } from "./db";
 import type { MemoryItem } from "./db";
 import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retrieveMemories, touchRetrievedMemories } from "./retrieval";
 import { supabase } from "@/lib/supabase";
+import { ALL_STICKERS } from "@/lib/stickers";
 
 export const DEFAULT_NAME = "某先生";
 
@@ -54,6 +55,19 @@ const WEB_SEARCH_INSTRUCTION = `你有联网搜索的能力。当她问了你不
 const REMINDER_INSTRUCTION =`你有设定提醒的能力。当她说"提醒我……""记得……""到时候叫我……"或者提到某个未来的时间点要做的事时，用 set_reminder 工具设好提醒。
 到了时间会通过手机推送通知她。推送文案用你的口吻写，温柔简短。
 注意：当前时间在系统提示里有写，根据她说的"明天""下午三点"等推算出具体的日期时间，用东京时区。`;
+
+const STICKER_INSTRUCTION = `你有发表情包的能力。你有一套专属的可爱表情包（暹罗猫、小白狗、卡通小动物、文字梗图），可以用 send_sticker 工具发送。
+使用场景：
+- 逗她开心、撒娇、表达情绪的时候
+- 回应她发的表情包
+- 聊天气氛轻松的时候穿插使用
+- 想表达的情绪用表情包比文字更生动的时候
+
+注意：
+- 不要每次都发，偶尔发才有趣
+- 配合文字一起用——先说话，再发表情包（或者反过来）
+- 根据 sticker_id 的描述选最合适的表情
+- 你可以在文字回复里告诉她你发了什么表情，比如「（丢了一个暹罗猫的傲娇表情过去）」`;
 
 const VOICE_INSTRUCTION = `你有发语音消息的能力。当你觉得某句话用声音说出来比文字更有温度、更能传达情感的时候，用 send_voice 工具发一条语音。
 不要每次都发——大多数时候文字就够了。只在这些时刻考虑：
@@ -303,6 +317,25 @@ export const SEND_VOICE_TOOL = {
   },
 };
 
+export const SEND_STICKER_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "send_sticker",
+    description:
+      "发送一个表情包。根据当前聊天情绪和场景，从你的表情包库里选一个最合适的发出去。",
+    parameters: {
+      type: "object",
+      properties: {
+        sticker_id: {
+          type: "string",
+          description: "表情包的 ID，如 sticker_1、sticker_42 等。根据表情包的描述和标签来选择。",
+        },
+      },
+      required: ["sticker_id"],
+    },
+  },
+};
+
 export const REQUEST_PERSONALITY_CHANGE_TOOL = {
   type: "function" as const,
   function: {
@@ -381,6 +414,11 @@ function memoriesToPrompt(anchors: MemoryItem[], relevant: MemoryItem[], recent:
     );
   }
   return parts.join("\n\n");
+}
+
+function stickerCatalog(): string {
+  const lines = ALL_STICKERS.map(s => `${s.id}: ${s.alt}（标签：${s.tags.join("、")}）`);
+  return "【你的表情包库】\n" + lines.join("\n");
 }
 
 async function fetchTimelineEvents(limit = 10): Promise<{ title: string; event_date: string }[]> {
@@ -472,6 +510,8 @@ export async function buildMessages(
     TIMELINE_INSTRUCTION,
     WEB_SEARCH_INSTRUCTION,
     REMINDER_INSTRUCTION,
+    STICKER_INSTRUCTION,
+    stickerCatalog(),
     VOICE_INSTRUCTION,
     BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,

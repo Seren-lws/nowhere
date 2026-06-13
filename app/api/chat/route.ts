@@ -3,6 +3,7 @@ import { saveMemoryItem } from "@/lib/brain/db";
 import { createDiary, getLastChatTime } from "@/lib/brain/diary";
 import { addFavorite } from "@/lib/brain/favorites";
 import { supabase } from "@/lib/supabase";
+import { ALL_STICKERS } from "@/lib/stickers";
 
 interface SavedMemory {
   content: string;
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
   let reminderSet: string | null = null;
   let personalityRequest = false;
   let voiceMessage: { text: string; audioUrl: string } | null = null;
+  let stickerMessage: { stickerId: string; url: string; alt: string } | null = null;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -346,6 +348,21 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "send_sticker") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const sticker = ALL_STICKERS.find(s => s.id === args.sticker_id);
+            if (sticker) {
+              stickerMessage = { stickerId: sticker.id, url: sticker.url, alt: sticker.alt };
+            } else {
+              result = JSON.stringify({ ok: false, error: "找不到这个表情包" });
+            }
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         } else if (tc.function.name === "invite_bedroom") {
           try {
             const args = JSON.parse(tc.function.arguments);
@@ -404,6 +421,7 @@ export async function POST(req: Request) {
       ...(reminderSet ? { reminderSet } : {}),
       ...(personalityRequest ? { personalityRequest } : {}),
       ...(voiceMessage ? { voiceMessage } : {}),
+      ...(stickerMessage ? { stickerMessage } : {}),
     });
   }
 

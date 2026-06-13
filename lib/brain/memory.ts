@@ -29,21 +29,19 @@ export function toContext(
     if (m.role !== "user" && m.role !== "assistant") continue;
 
     let content: string | ContentPart[];
-    if (m.role === "user") {
-      try {
-        const parsed = JSON.parse(m.content);
-        if (parsed?.type === "image" && parsed.imageUrl) {
-          content = [
-            { type: "image_url", image_url: { url: parsed.imageUrl } },
-            { type: "text", text: parsed.caption || "她发了一张图片。" },
-          ];
-        } else {
-          content = m.content;
-        }
-      } catch {
+    try {
+      const parsed = JSON.parse(m.content);
+      if (parsed?.type === "sticker" && parsed.alt) {
+        content = `[发送了表情包：${parsed.alt}]`;
+      } else if (m.role === "user" && parsed?.type === "image" && parsed.imageUrl) {
+        content = [
+          { type: "image_url", image_url: { url: parsed.imageUrl } },
+          { type: "text", text: parsed.caption || "她发了一张图片。" },
+        ];
+      } else {
         content = m.content;
       }
-    } else {
+    } catch {
       content = m.content;
     }
 
