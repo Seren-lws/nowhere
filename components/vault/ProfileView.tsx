@@ -112,6 +112,8 @@ export function ProfileView() {
         valence: null,
         arousal: null,
         source_ref: null,
+        temperature: 1.0,
+        decay_level: 0,
       })
       .select("*")
       .single();

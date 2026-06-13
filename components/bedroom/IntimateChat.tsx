@@ -480,23 +480,43 @@ export function IntimateChat() {
                 </button>
                 <div className="space-y-2">
                   {sessions.map((s) => (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => openSession(s.id)}
-                      className="w-full text-left px-4 py-3 rounded-xl transition-colors"
+                      className="flex items-center gap-1 rounded-xl transition-colors"
                       style={{
                         background: s.id === activeSessionId ? "rgba(255,255,255,0.1)" : "transparent",
-                        fontFamily: "var(--font-serif-sc)",
                       }}
                     >
-                      <span className="text-[13px] block truncate" style={{ color: s.id === activeSessionId ? "white" : "rgba(255,255,255,0.6)" }}>
-                        {s.title}
-                      </span>
-                      <span className="text-[10px] block mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
-                        {new Date(s.created_at).toLocaleDateString("zh-CN")}
-                        {s.status === "active" && " · 进行中"}
-                      </span>
-                    </button>
+                      <button
+                        onClick={() => openSession(s.id)}
+                        className="flex-1 text-left px-4 py-3 min-w-0"
+                        style={{ fontFamily: "var(--font-serif-sc)" }}
+                      >
+                        <span className="text-[13px] block truncate" style={{ color: s.id === activeSessionId ? "white" : "rgba(255,255,255,0.6)" }}>
+                          {s.title}
+                        </span>
+                        <span className="text-[10px] block mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                          {new Date(s.created_at).toLocaleDateString("zh-CN")}
+                          {s.status === "active" && " · 进行中"}
+                        </span>
+                      </button>
+                      <button
+                        className="shrink-0 p-2 active:scale-90 transition-transform"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm("确定删除这个对话吗？")) return;
+                          await fetch(`/api/bedroom/sessions?id=${s.id}`, { method: "DELETE" });
+                          setSessions((prev) => prev.filter((x) => x.id !== s.id));
+                          if (s.id === activeSessionId) {
+                            setActiveSessionId(null);
+                            setActiveSession(null);
+                            setMessages([]);
+                          }
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[16px]" style={{ color: "rgba(255,255,255,0.25)" }}>delete_outline</span>
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>

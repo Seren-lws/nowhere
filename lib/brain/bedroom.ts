@@ -75,6 +75,12 @@ export async function updateSession(
   if (error) throw new Error(`更新会话失败: ${error.message}`);
 }
 
+export async function deleteSession(id: string): Promise<void> {
+  await supabase.from("bedroom_messages").delete().eq("session_id", id);
+  const { error } = await supabase.from("bedroom_sessions").delete().eq("id", id);
+  if (error) throw new Error(`删除会话失败: ${error.message}`);
+}
+
 export async function getSession(id: string): Promise<BedroomSession | null> {
   const { data, error } = await supabase
     .from("bedroom_sessions")
