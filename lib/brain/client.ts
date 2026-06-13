@@ -19,6 +19,10 @@ export interface ChatResponse {
   savedFavorites?: SavedFavoriteInfo[];
   bedroomInvite?: string;
   searchQuery?: string;
+  diaryWritten?: boolean;
+  timelineEvent?: string;
+  reminderSet?: string;
+  personalityRequest?: boolean;
 }
 
 export async function sendChat(

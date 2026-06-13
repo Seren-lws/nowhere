@@ -49,6 +49,10 @@ export async function POST(req: Request) {
   const savedFavorites: SavedFavorite[] = [];
   let bedroomInvite: string | null = null;
   let searchQuery: string | null = null;
+  let diaryWritten = false;
+  let timelineEvent: string | null = null;
+  let reminderSet: string | null = null;
+  let personalityRequest = false;
 
   for (let round = 0; round < maxToolRounds; round++) {
     const reqBody: Record<string, unknown> = {
@@ -193,6 +197,7 @@ export async function POST(req: Request) {
               cover_from: coverFrom,
               cover_to: new Date().toISOString(),
             });
+            diaryWritten = true;
           } catch (e) {
             result = JSON.stringify({
               ok: false,
@@ -212,6 +217,7 @@ export async function POST(req: Request) {
                 source: "ai",
               });
             if (tlError) throw tlError;
+            timelineEvent = args.title;
           } catch (e) {
             result = JSON.stringify({
               ok: false,
@@ -268,6 +274,7 @@ export async function POST(req: Request) {
                 bark_message: args.bark_message,
               });
             if (remErr) throw remErr;
+            reminderSet = args.content;
           } catch (e) {
             result = JSON.stringify({
               ok: false,
@@ -296,6 +303,7 @@ export async function POST(req: Request) {
               new_content: args.new_content,
               reason: args.reason,
             });
+            personalityRequest = true;
           } catch (e) {
             result = JSON.stringify({
               ok: false,
@@ -326,6 +334,10 @@ export async function POST(req: Request) {
       ...(savedFavorites.length > 0 ? { savedFavorites } : {}),
       ...(bedroomInvite ? { bedroomInvite } : {}),
       ...(searchQuery ? { searchQuery } : {}),
+      ...(diaryWritten ? { diaryWritten } : {}),
+      ...(timelineEvent ? { timelineEvent } : {}),
+      ...(reminderSet ? { reminderSet } : {}),
+      ...(personalityRequest ? { personalityRequest } : {}),
     });
   }
 

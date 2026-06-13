@@ -260,6 +260,34 @@ export function LivingRoom() {
         setMessages([...acc]);
         saveHistory(acc);
       }
+
+      if (resp.diaryWritten) {
+        await delay(150);
+        acc.push({ role: "tool-notify", content: "diary", ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
+      if (resp.timelineEvent) {
+        await delay(150);
+        acc.push({ role: "tool-notify", content: `timeline:${resp.timelineEvent}`, ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
+      if (resp.reminderSet) {
+        await delay(150);
+        acc.push({ role: "tool-notify", content: `reminder:${resp.reminderSet}`, ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
+
+      if (resp.personalityRequest) {
+        await delay(150);
+        acc.push({ role: "tool-notify", content: "personality", ts: t++ });
+        setMessages([...acc]);
+        saveHistory(acc);
+      }
     } catch (e) {
       setSending(false);
       setError(e instanceof Error ? e.message : String(e));
@@ -460,6 +488,8 @@ export function LivingRoom() {
                   <FavNotifyCard text={m.content} />
                 ) : m.role === "search-notify" ? (
                   <SearchNotifyCard query={m.content} />
+                ) : m.role === "tool-notify" ? (
+                  <ToolNotifyCard payload={m.content} />
                 ) : m.role === "bedroom-invite" ? (
                   <BedroomInviteCard message={m.content} onAccept={() => goToBedroom()} />
                 ) : m.diaryShare ? (
@@ -1395,6 +1425,95 @@ function InnerBubble({ content, onFavorite }: { content: string; onFavorite?: ()
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ─── Tool Notify Card ─── */
+
+const TOOL_NOTIFY_CONFIG: Record<string, { icon: string; color: string; bg: string; border: string }> = {
+  diary: { icon: "auto_stories", color: "var(--primary)", bg: "rgba(212,165,165,0.12)", border: "rgba(212,165,165,0.2)" },
+  timeline: { icon: "timeline", color: "var(--accent-wisteria)", bg: "rgba(103,87,126,0.08)", border: "rgba(103,87,126,0.15)" },
+  reminder: { icon: "alarm", color: "#6b8f7a", bg: "rgba(107,143,122,0.08)", border: "rgba(107,143,122,0.15)" },
+  personality: { icon: "psychology", color: "var(--primary)", bg: "rgba(212,165,165,0.12)", border: "rgba(212,165,165,0.2)" },
+};
+
+function ToolNotifyCard({ payload }: { payload: string }) {
+  const router = useRouter();
+
+  let type = payload;
+  let detail = "";
+  const colonIdx = payload.indexOf(":");
+  if (colonIdx > 0) {
+    type = payload.slice(0, colonIdx);
+    detail = payload.slice(colonIdx + 1);
+  }
+
+  const cfg = TOOL_NOTIFY_CONFIG[type] ?? TOOL_NOTIFY_CONFIG.diary;
+
+  const labels: Record<string, string> = {
+    diary: "他写了一篇日记",
+    timeline: `记录了一个时刻：${detail}`,
+    reminder: `设了提醒：${detail}`,
+    personality: "他提交了一个人格变更申请",
+  };
+
+  const clickTargets: Record<string, string> = {
+    diary: "/study/his-drawer/diary",
+    timeline: "/vault/timeline",
+  };
+
+  const label = labels[type] ?? payload;
+  const target = clickTargets[type];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-center"
+    >
+      {target ? (
+        <button
+          onClick={() => router.push(target)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95"
+          style={{
+            background: cfg.bg,
+            border: `1px solid ${cfg.border}`,
+            fontFamily: "var(--font-serif-sc)",
+            fontSize: "12px",
+            color: cfg.color,
+          }}
+        >
+          <span
+            className="material-symbols-outlined text-[14px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            {cfg.icon}
+          </span>
+          {label}
+          <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+        </button>
+      ) : (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+          style={{
+            background: cfg.bg,
+            border: `1px solid ${cfg.border}`,
+            fontFamily: "var(--font-serif-sc)",
+            fontSize: "12px",
+            color: cfg.color,
+          }}
+        >
+          <span
+            className="material-symbols-outlined text-[14px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            {cfg.icon}
+          </span>
+          {label}
+        </div>
+      )}
     </motion.div>
   );
 }
