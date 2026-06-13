@@ -18,7 +18,7 @@ interface SavedFavorite {
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
-  config: { baseUrl: string; apiKey: string; model: string };
+  config: { baseUrl: string; apiKey: string; model: string; tavilyKey?: string };
   tools?: unknown[];
   room?: string;
 }
@@ -211,6 +211,44 @@ export async function POST(req: Request) {
                 source: "ai",
               });
             if (tlError) throw tlError;
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        } else if (tc.function.name === "web_search") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            if (!config.tavilyKey) {
+              result = JSON.stringify({ ok: false, error: "未配置 Tavily API Key，请到设置页填写" });
+            } else {
+              const searchRes = await fetch("https://api.tavily.com/search", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  api_key: config.tavilyKey,
+                  query: args.query,
+                  max_results: 5,
+                  include_answer: true,
+                }),
+              });
+              if (!searchRes.ok) {
+                result = JSON.stringify({ ok: false, error: `搜索失败 (${searchRes.status})` });
+              } else {
+                const searchData = await searchRes.json();
+                const snippets = (searchData.results || [])
+                  .map((r: { title: string; content: string; url: string }) =>
+                    `【${r.title}】${r.content}`
+                  )
+                  .join("\n\n");
+                result = JSON.stringify({
+                  ok: true,
+                  answer: searchData.answer || "",
+                  results: snippets,
+                });
+              }
+            }
           } catch (e) {
             result = JSON.stringify({
               ok: false,

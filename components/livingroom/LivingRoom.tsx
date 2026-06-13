@@ -12,6 +12,7 @@ import {
   SAVE_FAVORITE_TOOL,
   WRITE_DIARY_TOOL,
   SAVE_TIMELINE_TOOL,
+  WEB_SEARCH_TOOL,
   SET_REMINDER_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
   INVITE_BEDROOM_TOOL,
@@ -208,7 +209,7 @@ export function LivingRoom() {
     setError(null);
     try {
       const assembled = await buildMessages(ctx, last.content, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, SET_REMINDER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 

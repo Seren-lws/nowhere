@@ -322,6 +322,39 @@ export function SettingsForm() {
           </label>
         </GlassCard>
 
+        {/* 联网搜索 */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            联网搜索（Tavily）
+          </h2>
+          <label className="block">
+            <span
+              className="mb-1.5 block text-[13px]"
+              style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+            >
+              Tavily API Key
+            </span>
+            <input
+              type="text"
+              value={s.tavilyKey}
+              onChange={(e) => update("tavilyKey", e.target.value)}
+              placeholder="tvly-xxxxxxxx"
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full px-3.5 py-2.5 text-[13.5px] outline-none"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--input-focus)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--input-border)")}
+            />
+            <span className="mt-1 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+              去 tavily.com 注册即可免费获取，每月 1000 次搜索
+            </span>
+          </label>
+        </GlassCard>
+
         {/* 我的数据 */}
         <GlassCard>
           <h2

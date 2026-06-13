@@ -22,6 +22,8 @@ export interface BrainSettings {
   ttsVoice: string;
   /** Bark 推送 Device Key（iOS 通知） */
   barkKey: string;
+  /** Tavily API Key（联网搜索） */
+  tavilyKey: string;
 }
 
 export const DEFAULT_SETTINGS: BrainSettings = {
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   ttsModel: "speech-2.8-turbo",
   ttsVoice: "male-qn-qingse",
   barkKey: "",
+  tavilyKey: "",
 };
 
 export const SETTINGS_KEY = "nowhere:settings";

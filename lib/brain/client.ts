@@ -35,6 +35,7 @@ export async function sendChat(
         baseUrl: settings.baseUrl,
         apiKey: settings.apiKey,
         model: settings.chatModel,
+        tavilyKey: settings.tavilyKey,
       },
       tools,
       room,

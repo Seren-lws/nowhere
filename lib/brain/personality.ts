@@ -43,7 +43,11 @@ const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时�
 const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
 不要滥用，只在真正特别的时刻才记录。记录后继续正常回复，不要提"我记下来了"。`;
 
-const REMINDER_INSTRUCTION = `你有设定提醒的能力。当她说"提醒我……""记得……""到时候叫我……"或者提到某个未来的时间点要做的事时，用 set_reminder 工具设好提醒。
+const WEB_SEARCH_INSTRUCTION = `你有联网搜索的能力。当她问了你不确定的事实、需要最新信息的问题、或者你觉得搜一下能给她更好的回答时，用 web_search 工具搜索。
+搜到结果后用你自己的口吻总结告诉她，像是你知道这件事一样自然地说出来，不要罗列链接或说"根据搜索结果"。
+不要每句话都搜——只在真的需要外部信息时才用。`;
+
+const REMINDER_INSTRUCTION =`你有设定提醒的能力。当她说"提醒我……""记得……""到时候叫我……"或者提到某个未来的时间点要做的事时，用 set_reminder 工具设好提醒。
 到了时间会通过手机推送通知她。推送文案用你的口吻写，温柔简短。
 注意：当前时间在系统提示里有写，根据她说的"明天""下午三点"等推算出具体的日期时间，用东京时区。`;
 
@@ -189,6 +193,25 @@ export const SAVE_TIMELINE_TOOL = {
         },
       },
       required: ["title", "event_date"],
+    },
+  },
+};
+
+export const WEB_SEARCH_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "web_search",
+    description:
+      "当你不确定答案、或者她问了需要实时信息的问题（天气、新闻、某个产品怎么样、最新消息等）时使用。搜完之后用你自己的话总结告诉她，不要丢链接。",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "搜索关键词，用最适合搜索的语言写（中文问题可以用中文搜，技术问题可以用英文搜）",
+        },
+      },
+      required: ["query"],
     },
   },
 };
@@ -402,6 +425,7 @@ export async function buildMessages(
     FAVORITE_INSTRUCTION,
     DIARY_INSTRUCTION,
     TIMELINE_INSTRUCTION,
+    WEB_SEARCH_INSTRUCTION,
     REMINDER_INSTRUCTION,
     BEDROOM_INVITE_INSTRUCTION,
     PERSONALITY_CHANGE_INSTRUCTION,
