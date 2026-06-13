@@ -82,7 +82,7 @@ export async function migrateLocalToDb(): Promise<number> {
 
   let migrated = 0;
   for (const m of local) {
-    if (m.dbId || m.role === "memory" || m.role === "diary-notify" || m.role === "fav-notify" || m.role === "bedroom-invite") continue;
+    if (m.dbId || (m.role !== "user" && m.role !== "assistant" && m.role !== "inner")) continue;
     try {
       await saveChatMessage(m.role, m.content);
       migrated++;
