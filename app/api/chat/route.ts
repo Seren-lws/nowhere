@@ -17,7 +17,7 @@ interface SavedFavorite {
 }
 
 interface ChatRequest {
-  messages: { role: string; content: string }[];
+  messages: { role: string; content: unknown }[];
   config: { baseUrl: string; apiKey: string; model: string; tavilyKey?: string; elevenLabsKey?: string; elevenLabsVoiceId?: string };
   tools?: unknown[];
   room?: string;

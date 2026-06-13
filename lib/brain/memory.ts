@@ -1,4 +1,5 @@
 import { saveChatMessage, loadChatMessages } from "./db";
+import type { ContentPart } from "./personality";
 
 import type { SavedMemoryInfo } from "./client";
 
@@ -22,15 +23,35 @@ export interface ChatMessage {
 
 export function toContext(
   msgs: ChatMessage[],
-): { role: "user" | "assistant"; content: string }[] {
-  const out: { role: "user" | "assistant"; content: string }[] = [];
+): { role: "user" | "assistant"; content: string | ContentPart[] }[] {
+  const out: { role: "user" | "assistant"; content: string | ContentPart[] }[] = [];
   for (const m of msgs) {
     if (m.role !== "user" && m.role !== "assistant") continue;
-    const last = out[out.length - 1];
-    if (last && last.role === m.role) {
-      last.content += "\n" + m.content;
+
+    let content: string | ContentPart[];
+    if (m.role === "user") {
+      try {
+        const parsed = JSON.parse(m.content);
+        if (parsed?.type === "image" && parsed.imageUrl) {
+          content = [
+            { type: "image_url", image_url: { url: parsed.imageUrl } },
+            { type: "text", text: parsed.caption || "她发了一张图片。" },
+          ];
+        } else {
+          content = m.content;
+        }
+      } catch {
+        content = m.content;
+      }
     } else {
-      out.push({ role: m.role, content: m.content });
+      content = m.content;
+    }
+
+    const last = out[out.length - 1];
+    if (last && last.role === m.role && typeof last.content === "string" && typeof content === "string") {
+      last.content += "\n" + content;
+    } else {
+      out.push({ role: m.role, content });
     }
   }
   return out;

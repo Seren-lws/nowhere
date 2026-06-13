@@ -8,9 +8,13 @@ export const DEFAULT_NAME = "某先生";
 
 export type ChatMode = "sentences" | "passage";
 
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 }
 
 const MEMORY_INSTRUCTION = `你有记忆能力。当对话中出现**真正重要、值得长期保留**的信息时，才使用 save_memory 工具记录。
@@ -417,14 +421,18 @@ export function formatInstruction(mode: ChatMode): string {
 
 export async function buildMessages(
   history: LLMMessage[],
-  userText: string,
+  userContent: string | ContentPart[],
   mode: ChatMode,
 ): Promise<LLMMessage[]> {
+  const queryText = typeof userContent === "string"
+    ? userContent
+    : userContent.filter((p): p is { type: "text"; text: string } => p.type === "text").map(p => p.text).join(" ") || "图片";
+
   const [layers, profiles, anchors, relevant, recent, samples, timeline] = await Promise.all([
     fetchPersonalityLayers(),
     fetchProfileMemories(),
     fetchAnchorMemories(),
-    retrieveMemories({ query: userText, limit: 10 }),
+    retrieveMemories({ query: queryText, limit: 10 }),
     fetchRecentMemories(10),
     fetchRecentAssistantMessages("living-room", 3),
     fetchTimelineEvents(10),
@@ -476,7 +484,7 @@ export async function buildMessages(
   return [
     { role: "system", content: systemParts.join("\n\n") },
     ...history,
-    { role: "user", content: userText },
+    { role: "user", content: userContent },
   ];
 }
 

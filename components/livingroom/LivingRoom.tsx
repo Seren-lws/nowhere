@@ -19,6 +19,7 @@ import {
   INVITE_BEDROOM_TOOL,
   parseReply,
   type ChatMode,
+  type ContentPart,
 } from "@/lib/brain/personality";
 import {
   HISTORY_WINDOW,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/brain/memory";
 import { clearChatMessages } from "@/lib/brain/db";
 import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
+import { supabase } from "@/lib/supabase";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const TWO_HOURS = 2 * 60 * 60 * 1000;
@@ -47,11 +49,13 @@ export function LivingRoom() {
   const [mode, setMode] = useState<ChatMode>("sentences");
   const [selectedTs, setSelectedTs] = useState<number | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showPlus, setShowPlus] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const s = loadSettings();
@@ -209,7 +213,17 @@ export function LivingRoom() {
     setSending(true);
     setError(null);
     try {
-      const assembled = await buildMessages(ctx, last.content, mode);
+      let userContent: string | ContentPart[] = last.content;
+      try {
+        const p = JSON.parse(last.content);
+        if (p?.type === "image" && p.imageUrl) {
+          userContent = [
+            { type: "image_url", image_url: { url: p.imageUrl } },
+            { type: "text", text: p.caption || "她发了一张图片给你看。仔细看看图片内容，然后自然地回应她。" },
+          ];
+        }
+      } catch {}
+      const assembled = await buildMessages(ctx, userContent, mode);
       const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
@@ -368,6 +382,38 @@ export function LivingRoom() {
     router.push(`/bedroom/intimate?from=livingroom&context=${ctx}`);
   };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !settings) return;
+    e.target.value = "";
+    setShowPlus(false);
+
+    const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${file.name.split(".").pop() || "jpg"}`;
+    const { error: uploadErr } = await supabase.storage
+      .from("chat-images")
+      .upload(fileName, file, { contentType: file.type });
+
+    if (uploadErr) {
+      setError(`图片上传失败: ${uploadErr.message}`);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("chat-images")
+      .getPublicUrl(fileName);
+
+    const content = JSON.stringify({ type: "image", imageUrl: urlData.publicUrl });
+    const msg: ChatMessage = { role: "user", content, ts: Date.now() };
+    const acc = [...messages, msg];
+    setMessages(acc);
+    saveHistory(acc);
+    saveMessageToDb("user", content).then((dbId) => {
+      msg.dbId = dbId;
+      saveHistory(acc);
+    }).catch(() => {});
+    await requestReply(acc);
+  };
+
   const clearChat = () => {
     if (!window.confirm("把这间客厅的聊天清空吗？清空后他会回到初见时的样子（设置和其他数据不受影响）。")) return;
     const greet: ChatMessage = { role: "assistant", content: FIRST_GREETING, ts: Date.now() };
@@ -500,6 +546,8 @@ export function LivingRoom() {
                   <SearchNotifyCard query={m.content} />
                 ) : m.role === "voice" ? (
                   <VoiceBubble data={m.content} />
+                ) : isImageMessage(m.content) ? (
+                  <ImageBubble data={m.content} />
                 ) : m.role === "tool-notify" ? (
                   <ToolNotifyCard payload={m.content} />
                 ) : m.role === "bedroom-invite" ? (
@@ -619,6 +667,15 @@ export function LivingRoom() {
         )}
       </AnimatePresence>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageSelect}
+      />
+
       {/* Bottom bar: mode switcher + input */}
       <div className="fixed bottom-0 left-0 w-full z-50">
         <div className="flex justify-center mb-3">
@@ -626,7 +683,6 @@ export function LivingRoom() {
         </div>
 
         <div
-          className="px-5 pt-3 pb-8 flex items-center gap-3"
           style={{
             background: "rgba(255,255,255,0.4)",
             backdropFilter: "blur(24px)",
@@ -634,11 +690,26 @@ export function LivingRoom() {
             borderTop: "1px solid rgba(255,255,255,0.5)",
           }}
         >
+          <AnimatePresence>
+            {showPlus && (
+              <PlusPanel
+                onImage={() => fileInputRef.current?.click()}
+              />
+            )}
+          </AnimatePresence>
+
+          <div className="px-5 pt-3 pb-8 flex items-center gap-3">
           <button
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full neu-flat active:scale-95 transition-transform"
             style={{ color: "var(--primary)" }}
+            onClick={() => setShowPlus(!showPlus)}
           >
-            <span className="material-symbols-outlined">add</span>
+            <span
+              className="material-symbols-outlined transition-transform duration-200"
+              style={{ transform: showPlus ? "rotate(45deg)" : "none" }}
+            >
+              add
+            </span>
           </button>
 
           <div className="flex-1 relative">
@@ -667,7 +738,7 @@ export function LivingRoom() {
 
           <button
             type="button"
-            onClick={send}
+            onClick={() => { send(); setShowPlus(false); }}
             disabled={!ready || sending || !input.trim()}
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, #eddcff, #ffdad9)" }}
@@ -676,6 +747,7 @@ export function LivingRoom() {
               send
             </span>
           </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1564,6 +1636,156 @@ function VoiceBubble({ data }: { data: string }) {
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+/* ─── Plus Panel ─── */
+
+function PlusPanel({ onImage }: { onImage: () => void }) {
+  const items = [
+    { icon: "image", label: "图片", action: onImage, active: true },
+    { icon: "mood", label: "表情", action: () => {}, active: false },
+    { icon: "attach_file", label: "文件", action: () => {}, active: false },
+    { icon: "link", label: "链接", action: () => {}, active: false },
+  ];
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className="overflow-hidden"
+    >
+      <div
+        className="grid grid-cols-4 gap-4 px-8 py-5"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }}
+      >
+        {items.map((item) => (
+          <button
+            key={item.icon}
+            onClick={item.active ? item.action : undefined}
+            disabled={!item.active}
+            className="flex flex-col items-center gap-2 transition-transform active:scale-95 disabled:cursor-default"
+            style={{ opacity: item.active ? 1 : 0.3 }}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{
+                background: "rgba(255,255,255,0.6)",
+                boxShadow: item.active
+                  ? "4px 4px 8px #e0dbdb, -4px -4px 8px #ffffff"
+                  : "2px 2px 4px #e0dbdb, -2px -2px 4px #ffffff",
+                border: "1px solid rgba(255,255,255,0.4)",
+              }}
+            >
+              <span
+                className="material-symbols-outlined text-[24px]"
+                style={{
+                  color: item.active ? "var(--primary)" : "var(--text-faint)",
+                  fontVariationSettings: "'FILL' 1",
+                }}
+              >
+                {item.icon}
+              </span>
+            </div>
+            <span
+              className="text-[12px]"
+              style={{
+                fontFamily: "var(--font-serif-sc)",
+                color: item.active ? "var(--text-mid)" : "var(--text-faint)",
+              }}
+            >
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Image Bubble ─── */
+
+function isImageMessage(content: string): boolean {
+  try {
+    const p = JSON.parse(content);
+    return p?.type === "image" && !!p.imageUrl;
+  } catch {
+    return false;
+  }
+}
+
+function ImageBubble({ data }: { data: string }) {
+  const [zoomed, setZoomed] = useState(false);
+
+  let parsed: { type: string; imageUrl: string; caption?: string };
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return null;
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col items-end gap-1"
+      >
+        <div
+          className="rounded-xl overflow-hidden max-w-[70%] cursor-pointer active:scale-[0.98] transition-transform"
+          style={{
+            boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+          }}
+          onClick={() => setZoomed(true)}
+        >
+          <img
+            src={parsed.imageUrl}
+            alt="发送的图片"
+            className="w-full h-auto max-h-[300px] object-cover"
+            loading="lazy"
+          />
+        </div>
+        {parsed.caption && (
+          <div
+            className="rounded-xl px-3.5 py-2 max-w-[70%] whitespace-pre-wrap"
+            style={{
+              background: "#ffdad9",
+              boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "14.5px",
+              lineHeight: "24px",
+              color: "var(--text-deep)",
+            }}
+          >
+            {parsed.caption}
+          </div>
+        )}
+      </motion.div>
+
+      <AnimatePresence>
+        {zoomed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80"
+            onClick={() => setZoomed(false)}
+          >
+            <motion.img
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              src={parsed.imageUrl}
+              alt="放大查看"
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
