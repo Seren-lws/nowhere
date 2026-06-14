@@ -64,10 +64,10 @@ export async function loadChatMessages(
     .from("chat_messages")
     .select("*")
     .eq("room", room)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`读取聊天记录失败: ${error.message}`);
-  return data ?? [];
+  return (data ?? []).reverse();
 }
 
 export async function saveMemoryItem(item: {
