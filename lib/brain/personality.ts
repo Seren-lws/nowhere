@@ -5,7 +5,7 @@ import { fetchAnchorMemories, fetchProfileMemories, fetchRecentMemories, retriev
 import { supabase } from "@/lib/supabase";
 import { ALL_STICKERS } from "@/lib/stickers";
 
-export const DEFAULT_NAME = "某先生";
+export const DEFAULT_NAME = "裴斯年";
 
 export type ChatMode = "sentences" | "passage";
 
@@ -46,7 +46,7 @@ const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时�
 她不让你写的时候不要主动写。`;
 
 const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
-不要滥用，只在真正特别的时刻才记录。记录后继续正常回复，不要提"我记下来了"。`;
+不要滥用，只在真正特别的时刻才记录。先检查【时间回廊】里有没有类似的记录，避免重复。记录后继续正常回复，不要提"我记下来了"。`;
 
 const WEB_SEARCH_INSTRUCTION = `你有联网搜索的能力。当她问了你不确定的事实、需要最新信息的问题、或者你觉得搜一下能给她更好的回答时，用 web_search 工具搜索。
 搜到结果后用你自己的口吻总结告诉她，像是你知道这件事一样自然地说出来，不要罗列链接或说"根据搜索结果"。
@@ -127,7 +127,7 @@ export const SAVE_MEMORY_TOOL = {
             "profile",
           ],
           description:
-            "记忆类型：fact事实/event事件/emotion情绪/promise约定/preference喜好/habit习惯/relationship关系/profile档案（当发现关于她的稳定个人信息时使用此类型，如姓名、年龄、住所、性格、喜好、逆鳞等）",
+            "记忆类型：fact事实/event事件/emotion情绪/promise约定/preference喜好/habit习惯/relationship关系/profile档案。profile仅用于她本人的基础信息（姓名、年龄、住所等客观信息），喜好用preference，性格特征用fact，你们之间的事用relationship。不要把关系相关的内容存成profile。",
         },
         valence: {
           type: "number",

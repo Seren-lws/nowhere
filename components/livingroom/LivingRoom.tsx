@@ -56,6 +56,7 @@ export function LivingRoom() {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [pendingSticker, setPendingSticker] = useState<{ id: string; url: string; alt: string } | null>(null);
   const [atBottom, setAtBottom] = useState(true);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -395,6 +396,23 @@ export function LivingRoom() {
       return;
     }
 
+    if (pendingSticker) {
+      const caption = text;
+      const stickerData = pendingSticker;
+      setPendingSticker(null);
+      setInput("");
+      setSelectedTs(null);
+
+      const content = JSON.stringify({ type: "sticker", stickerId: stickerData.id, url: stickerData.url, alt: stickerData.alt, ...(caption ? { caption } : {}) });
+      const msg: ChatMessage = { role: "user", content, ts: Date.now() };
+      const acc = [...messages, msg];
+      setMessages(acc);
+      saveHistory(acc);
+      saveMessageToDb("user", content).then((dbId) => { msg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+      await requestReply(acc);
+      return;
+    }
+
     if (!text) return;
     setSelectedTs(null);
     const acc = [...messages, { role: "user", content: text, ts: Date.now() } as ChatMessage];
@@ -408,19 +426,12 @@ export function LivingRoom() {
     await requestReply(acc);
   };
 
-  const sendSticker = async (stickerId: string) => {
-    if (sending || !settings) return;
+  const sendSticker = (stickerId: string) => {
     const sticker = ALL_STICKERS.find(s => s.id === stickerId);
     if (!sticker) return;
     setShowPlus(false);
     setShowStickerPanel(false);
-    const content = JSON.stringify({ type: "sticker", stickerId: sticker.id, url: sticker.url, alt: sticker.alt });
-    const msg: ChatMessage = { role: "user", content, ts: Date.now() };
-    const acc = [...messages, msg];
-    setMessages(acc);
-    saveHistory(acc);
-    saveMessageToDb("user", content).then((dbId) => { msg.dbId = dbId; saveHistory(acc); }).catch(() => {});
-    await requestReply(acc);
+    setPendingSticker({ id: sticker.id, url: sticker.url, alt: sticker.alt });
   };
 
   const editResend = (ts: number) => {
@@ -935,6 +946,52 @@ export function LivingRoom() {
             )}
           </AnimatePresence>
 
+          {/* Sticker preview */}
+          <AnimatePresence>
+            {pendingSticker && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-5 pt-3 pb-2 flex items-start gap-3">
+                  <div className="relative">
+                    <img
+                      src={pendingSticker.url}
+                      alt={pendingSticker.alt}
+                      className="w-16 h-16 object-contain rounded-xl"
+                      style={{
+                        boxShadow: "4px 4px 8px #e0dbdb, -4px -4px 8px #ffffff",
+                        border: "1px solid rgba(255,255,255,0.4)",
+                        background: "rgba(255,255,255,0.5)",
+                      }}
+                    />
+                    <button
+                      onClick={() => setPendingSticker(null)}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{
+                        background: "rgba(123,84,85,0.8)",
+                        color: "white",
+                        fontSize: "12px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <span
+                    className="text-[12px] pt-1"
+                    style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}
+                  >
+                    可以在下方输入文字，和表情包一起发送
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="px-5 pt-3 pb-8 flex items-center gap-3">
           <button
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full neu-flat active:scale-95 transition-transform"
@@ -961,7 +1018,7 @@ export function LivingRoom() {
                 }
               }}
               rows={1}
-              placeholder={pendingImage ? "添加文字说明（可选）" : ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
+              placeholder={pendingImage ? "添加文字说明（可选）" : pendingSticker ? "配一句话（可选）" : ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
               disabled={!ready || sending}
               className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[16px] resize-none disabled:opacity-60"
               style={{
@@ -976,7 +1033,7 @@ export function LivingRoom() {
           <button
             type="button"
             onClick={send}
-            disabled={!ready || sending || (!input.trim() && !pendingImage)}
+            disabled={!ready || sending || (!input.trim() && !pendingImage && !pendingSticker)}
             className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, #eddcff, #ffdad9)" }}
           >
@@ -2206,7 +2263,7 @@ function isStickerMessage(content: string): boolean {
 function StickerBubble({ data, align }: { data: string; align: "left" | "right" }) {
   const [zoomed, setZoomed] = useState(false);
 
-  let parsed: { type: string; stickerId: string; url: string; alt: string };
+  let parsed: { type: string; stickerId: string; url: string; alt: string; caption?: string };
   try {
     parsed = JSON.parse(data);
   } catch {
@@ -2219,7 +2276,7 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className={`flex ${align === "right" ? "justify-end" : "justify-start"}`}
+        className={`flex flex-col ${align === "right" ? "items-end" : "items-start"}`}
       >
         <div
           className="cursor-pointer active:scale-95 transition-transform"
@@ -2232,6 +2289,23 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
             loading="lazy"
           />
         </div>
+        {parsed.caption && (
+          <div
+            className={`mt-1.5 rounded-[20px] ${align === "right" ? "rounded-br-[4px]" : "rounded-bl-[4px]"} px-4 py-2.5 max-w-[80%] whitespace-pre-wrap`}
+            style={{
+              fontFamily: "var(--font-serif-sc)",
+              fontSize: "14.5px",
+              lineHeight: "24px",
+              background: align === "right" ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.4)",
+              color: "var(--text-deep)",
+              boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
+            }}
+          >
+            {parsed.caption}
+          </div>
+        )}
       </motion.div>
 
       <AnimatePresence>

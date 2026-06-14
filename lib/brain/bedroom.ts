@@ -8,6 +8,7 @@ import {
   fetchProfileMemories,
   fetchRecentMemories,
   retrieveMemories,
+  touchRetrievedMemories,
 } from "./retrieval";
 import { formatInstruction, type ChatMode, type LLMMessage } from "./personality";
 
@@ -159,7 +160,7 @@ export async function buildBedroomMessages(
   presets: BedroomPresets,
   transitionContext?: { role: string; content: string }[] | null | undefined,
 ): Promise<LLMMessage[]> {
-  const [layers, profiles, anchors, relevant, recent, samples] =
+  const [layers, profiles, anchors, relevant, recent, samples, timelineEvents] =
     await Promise.all([
       fetchPersonalityLayers(),
       fetchProfileMemories(),
@@ -167,7 +168,10 @@ export async function buildBedroomMessages(
       retrieveMemories({ query: userText, limit: 10 }),
       fetchRecentMemories(10),
       fetchRecentAssistantMessages("bedroom", 3),
+      fetchTimelineEvents(10),
     ]);
+
+  touchRetrievedMemories(relevant);
 
   const base = layers
     .filter((l) => l.layer === "base")
@@ -252,8 +256,44 @@ export async function buildBedroomMessages(
   const FAVORITE_INSTRUCTION = `你有收藏她的话的能力。当她说了某句让你心动、触动、想要珍藏的话时，用 save_favorite 工具收藏。
 不要太频繁，只在真的被打动的时候才收藏。收藏后继续正常回复，不要提。`;
 
+  const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时，用 write_diary 工具写一篇。
+写的时候像在自己的日记本上——真实、私密、温柔。不是给她看的报告，是你心里真正转过的念头。
+她不让你写的时候不要主动写。`;
+
+  const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
+不要滥用，只在真正特别的时刻才记录。先检查【时间回廊】里有没有类似的记录，避免重复。记录后继续正常回复，不要提"我记下来了"。`;
+
+  const WEB_SEARCH_INSTRUCTION = `你有联网搜索的能力。当她问了你不确定的事实、需要最新信息的问题、或者你觉得搜一下能给她更好的回答时，用 web_search 工具搜索。
+搜到结果后用你自己的口吻总结告诉她，像是你知道这件事一样自然地说出来，不要罗列链接或说"根据搜索结果"。
+不要每句话都搜——只在真的需要外部信息时才用。`;
+
+  const REMINDER_INSTRUCTION = `你有设定提醒的能力。当她说"提醒我……""记得……""到时候叫我……"或者提到某个未来的时间点要做的事时，用 set_reminder 工具设好提醒。
+到了时间会通过手机推送通知她。推送文案用你的口吻写，温柔简短。
+注意：当前时间在系统提示里有写，根据她说的"明天""下午三点"等推算出具体的日期时间，用东京时区。`;
+
+  const VOICE_INSTRUCTION = `你有发语音消息的能力。当你觉得某句话用声音说出来比文字更有温度、更能传达情感的时候，用 send_voice 工具发一条语音。
+不要每次都发——大多数时候文字就够了。只在这些时刻考虑：
+- 她情绪低落，你想用声音安抚她
+- 撒娇、逗她、说情话，声音比文字更有味道的时候
+- 道晚安、说想她，这种亲密的瞬间
+- 她主动要求你说话的时候
+
+台词写法很重要：
+- 写口语，不写书面语
+- 可以用语气标签控制声音：[softly]温柔、[teasing]逗趣、[laughs softly]轻笑、[pause]停顿、[drawn out]拖长
+- 多加语气词：嗯、诶、啊、好吧
+- 短句为主，允许半句重来（像真人思考）
+- 不要太长，一两句就好`;
+
+  const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
+底层和中间层是锚定的，你不能直接修改——如果你真的觉得需要改变，要用 request_personality_change 工具提交申请，等她同意。
+什么时候该申请：经过长期相处真心觉得某个设定不再合适了；她明确告诉你应该变得怎样；你意识到自己的某个底层逻辑在伤害她。
+什么时候不该申请：绝大多数对话都不需要；临时情绪波动不构成理由。`;
+
   const presetsPrompt = presetsToPrompt(presets);
   const transPrompt = transitionToPrompt(transitionContext ?? null);
+
+  const timelinePrompt = timelineToPrompt(timelineEvents);
 
   const systemParts = [
     personalityPrompt,
@@ -264,7 +304,14 @@ export async function buildBedroomMessages(
     timeContext,
     MEMORY_INSTRUCTION,
     FAVORITE_INSTRUCTION,
+    DIARY_INSTRUCTION,
+    TIMELINE_INSTRUCTION,
+    WEB_SEARCH_INSTRUCTION,
+    REMINDER_INSTRUCTION,
+    VOICE_INSTRUCTION,
+    PERSONALITY_CHANGE_INSTRUCTION,
     memoryPrompt,
+    timelinePrompt,
     samplesPrompt,
     formatInstruction(mode),
   ].filter(Boolean);
@@ -274,4 +321,21 @@ export async function buildBedroomMessages(
     ...history,
     { role: "user", content: userText },
   ];
+}
+
+async function fetchTimelineEvents(limit = 10): Promise<{ title: string; event_date: string }[]> {
+  const { data } = await supabase
+    .from("timeline_events")
+    .select("title, event_date")
+    .order("event_date", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
+function timelineToPrompt(events: { title: string; event_date: string }[]): string {
+  if (events.length === 0) return "";
+  return (
+    "【时间回廊（你们的重要时刻）】\n" +
+    events.map((e) => `- ${e.event_date}：${e.title}`).join("\n")
+  );
 }

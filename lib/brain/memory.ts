@@ -32,7 +32,9 @@ export function toContext(
     try {
       const parsed = JSON.parse(m.content);
       if (parsed?.type === "sticker" && parsed.alt) {
-        content = `[发送了表情包：${parsed.alt}]`;
+        content = parsed.caption
+          ? `[发送了表情包：${parsed.alt}] ${parsed.caption}`
+          : `[发送了表情包：${parsed.alt}]`;
       } else if (m.role === "user" && parsed?.type === "image" && parsed.imageUrl) {
         content = [
           { type: "image_url", image_url: { url: parsed.imageUrl } },
