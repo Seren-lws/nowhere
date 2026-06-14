@@ -346,6 +346,7 @@ export function LivingRoom() {
         acc.push(voiceMsg);
         setMessages([...acc]);
         saveHistory(acc);
+        saveMessageToDb("voice", voiceContent).then((dbId) => { voiceMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.stickerMessage) {

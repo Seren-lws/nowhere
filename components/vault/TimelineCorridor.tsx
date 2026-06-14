@@ -19,16 +19,29 @@ const SOURCE_LABEL: Record<string, string> = {
   gardener: "园丁发现",
 };
 
+function parseEventDate(dateStr: string): Date {
+  if (dateStr.includes("T") || dateStr.includes(" ")) {
+    const normalized = dateStr.replace(" ", "T");
+    return new Date(normalized.length <= 16 ? normalized + ":00" : normalized);
+  }
+  return new Date(dateStr + "T00:00:00");
+}
+
 function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  const d = parseEventDate(dateStr);
+  const base = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  const h = d.getHours();
+  const m = d.getMinutes();
+  if (h === 0 && m === 0 && !dateStr.includes(":")) return base;
+  return `${base} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function daysAgo(dateStr: string): string {
-  const target = new Date(dateStr + "T00:00:00");
+  const target = parseEventDate(dateStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diff = Math.floor((today.getTime() - target.getTime()) / 86400000);
+  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diff = Math.floor((today.getTime() - targetDay.getTime()) / 86400000);
   if (diff === 0) return "今天";
   if (diff === 1) return "昨天";
   if (diff < 0) return `${-diff}天后`;
@@ -123,7 +136,7 @@ export function TimelineCorridor() {
   const [newContent, setNewContent] = useState("");
   const [newDate, setNewDate] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   });
   const [newIcon, setNewIcon] = useState("favorite");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -344,9 +357,9 @@ export function TimelineCorridor() {
                 />
                 <div className="flex gap-3 items-center flex-wrap">
                   <input
-                    type="date"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
+                    type="datetime-local"
+                    value={newDate.replace(" ", "T")}
+                    onChange={(e) => setNewDate(e.target.value.replace("T", " "))}
                     className="border-none outline-none rounded-xl p-3 flex-1 min-w-[140px]"
                     style={{
                       fontFamily: "var(--font-serif-sc)",
@@ -500,9 +513,9 @@ export function TimelineCorridor() {
                             style={{ fontFamily: "var(--font-serif-sc)", fontSize: "13px", color: "white", background: "rgba(255,255,255,0.1)", minHeight: "40px" }}
                           />
                           <input
-                            type="date"
-                            value={editDate}
-                            onChange={(e) => setEditDate(e.target.value)}
+                            type="datetime-local"
+                            value={editDate.replace(" ", "T")}
+                            onChange={(e) => setEditDate(e.target.value.replace("T", " "))}
                             className="border-none outline-none rounded-lg p-2"
                             style={{ fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "white", background: "rgba(255,255,255,0.1)", colorScheme: "dark" }}
                           />
