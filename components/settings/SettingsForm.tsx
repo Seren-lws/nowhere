@@ -51,6 +51,8 @@ export function SettingsForm() {
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -394,6 +396,66 @@ export function SettingsForm() {
               每次对话时带多少条历史消息给他。越多越了解上下文，但更费 token
             </span>
           </label>
+        </GlassCard>
+
+        {/* 记忆向量 */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            记忆向量
+          </h2>
+          <p className="mb-4 text-[12px] leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            向量搜索让他能理解语义而不只是匹配关键词。新记忆会自动生成向量，旧记忆需要手动补齐。
+          </p>
+          <button
+            type="button"
+            disabled={backfilling}
+            onClick={async () => {
+              setBackfilling(true);
+              setBackfillMsg(null);
+              try {
+                const res = await fetch("/api/embedding/backfill", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    baseUrl: s.baseUrl,
+                    apiKey: s.apiKey,
+                    model: s.embeddingModel,
+                  }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                  setBackfillMsg(`失败：${data.error}`);
+                } else if (data.remaining > 0) {
+                  setBackfillMsg(`本轮补齐 ${data.updated} 条，还剩 ${data.remaining} 条未处理，可再点一次`);
+                } else {
+                  setBackfillMsg(`完成！补齐了 ${data.updated} 条，全部记忆已有向量`);
+                }
+              } catch (e) {
+                setBackfillMsg(`出错了：${e instanceof Error ? e.message : String(e)}`);
+              }
+              setBackfilling(false);
+            }}
+            className="px-5 py-2.5 text-[13px] transition-all disabled:opacity-50"
+            style={{
+              borderRadius: 12,
+              border: "1px solid rgba(205,193,217,.4)",
+              background: "transparent",
+              color: "var(--text-mid)",
+              letterSpacing: "1px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {backfilling ? "补齐中…" : "补齐旧记忆向量"}
+          </button>
+          {backfillMsg && (
+            <p className="mt-3 text-[13px]" style={{ color: "var(--text-mid)" }}>
+              {backfillMsg}
+            </p>
+          )}
         </GlassCard>
 
         {/* 我的数据 */}
