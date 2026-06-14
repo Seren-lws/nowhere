@@ -16,7 +16,7 @@ import {
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
-import { HISTORY_WINDOW, toContext, type ChatMessage } from "@/lib/brain/memory";
+import { getHistoryWindow, toContext, type ChatMessage } from "@/lib/brain/memory";
 import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
 import type { BedroomPresets, BedroomSession } from "@/lib/brain/bedroom";
 
@@ -57,6 +57,7 @@ export function IntimateChat() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   /* ─── Init ─── */
 
@@ -65,6 +66,13 @@ export function IntimateChat() {
     setSettings(s);
     loadSessions();
   }, []);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, [input]);
 
   const loadSessions = async () => {
     try {
@@ -186,7 +194,7 @@ export function IntimateChat() {
   const requestReply = async (base: ChatMessage[]) => {
     if (!settings || !activeSessionId || !activeSession) return;
     const last = base[base.length - 1];
-    const ctx = toContext(base.slice(0, -1)).slice(-HISTORY_WINDOW);
+    const ctx = toContext(base.slice(0, -1)).slice(-getHistoryWindow());
     setSending(true);
     setError(null);
     try {
@@ -760,6 +768,7 @@ export function IntimateChat() {
         <div className="px-5 pt-3 pb-8 flex items-center gap-3" style={{ background: "rgba(13,12,21,0.8)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex-1 relative">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
@@ -775,6 +784,7 @@ export function IntimateChat() {
                 background: "rgba(255,255,255,0.04)",
                 borderRadius: "24px",
                 border: "1px solid rgba(255,255,255,0.08)",
+                overflowY: input && textareaRef.current && textareaRef.current.scrollHeight > 120 ? "auto" : "hidden",
               }}
             />
           </div>

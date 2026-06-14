@@ -26,6 +26,8 @@ export interface BrainSettings {
   elevenLabsKey: string;
   /** ElevenLabs Voice ID（音色） */
   elevenLabsVoiceId: string;
+  /** 上下文消息条数（对话时带多少条历史） */
+  historyWindow: number;
 }
 
 export const DEFAULT_SETTINGS: BrainSettings = {
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   tavilyKey: "",
   elevenLabsKey: "",
   elevenLabsVoiceId: "pU6Nb7V1jj4swj5j28sM",
+  historyWindow: 30,
 };
 
 export const SETTINGS_KEY = "nowhere:settings";

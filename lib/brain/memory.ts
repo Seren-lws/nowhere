@@ -60,6 +60,18 @@ export function toContext(
 export const CHAT_KEY = "nowhere:chat:living-room";
 export const HISTORY_WINDOW = 30;
 
+export function getHistoryWindow(): number {
+  if (typeof window === "undefined") return HISTORY_WINDOW;
+  try {
+    const raw = window.localStorage.getItem("nowhere:settings");
+    if (!raw) return HISTORY_WINDOW;
+    const s = JSON.parse(raw);
+    return typeof s.historyWindow === "number" && s.historyWindow > 0 ? s.historyWindow : HISTORY_WINDOW;
+  } catch {
+    return HISTORY_WINDOW;
+  }
+}
+
 export function loadHistory(): ChatMessage[] {
   if (typeof window === "undefined") return [];
   try {

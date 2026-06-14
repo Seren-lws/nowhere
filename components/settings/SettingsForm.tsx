@@ -348,6 +348,54 @@ export function SettingsForm() {
           </label>
         </GlassCard>
 
+        {/* 对话设置 */}
+        <GlassCard>
+          <h2
+            className="mb-4 text-[13px]"
+            style={{ color: "var(--text-faint)", letterSpacing: "2px" }}
+          >
+            对话设置
+          </h2>
+          <label className="block">
+            <span
+              className="mb-1.5 block text-[13px]"
+              style={{ color: "var(--text-mid)", letterSpacing: "1px" }}
+            >
+              上下文条数
+            </span>
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {[10, 20, 30, 50, 80].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => { setS((prev) => ({ ...prev, historyWindow: n })); setSaved(false); }}
+                  className="px-4 py-2 text-[13px] transition-all active:scale-95"
+                  style={{
+                    borderRadius: 12,
+                    border: s.historyWindow === n
+                      ? "1.5px solid var(--accent-wisteria)"
+                      : "1px solid var(--input-border)",
+                    background: s.historyWindow === n
+                      ? "rgba(205,193,217,0.15)"
+                      : "var(--input-bg)",
+                    color: s.historyWindow === n
+                      ? "var(--accent-wisteria)"
+                      : "var(--text-mid)",
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    fontWeight: s.historyWindow === n ? 600 : 400,
+                  }}
+                >
+                  {n} 条
+                </button>
+              ))}
+            </div>
+            <span className="mt-2 block text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+              每次对话时带多少条历史消息给他。越多越了解上下文，但更费 token
+            </span>
+          </label>
+        </GlassCard>
+
         {/* 我的数据 */}
         <GlassCard>
           <h2

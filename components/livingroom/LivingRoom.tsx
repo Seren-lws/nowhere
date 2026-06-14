@@ -23,7 +23,7 @@ import {
   type ContentPart,
 } from "@/lib/brain/personality";
 import {
-  HISTORY_WINDOW,
+  getHistoryWindow,
   loadHistory,
   saveHistory,
   loadHistoryFromDb,
@@ -63,6 +63,7 @@ export function LivingRoom() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const s = loadSettings();
@@ -202,6 +203,13 @@ export function LivingRoom() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showMenu]);
 
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, [input]);
+
   const ready = settings ? isChatReady(settings) : false;
 
   const handleScroll = () => {
@@ -217,7 +225,7 @@ export function LivingRoom() {
   const requestReply = async (base: ChatMessage[]) => {
     if (!settings) return;
     const last = base[base.length - 1];
-    const ctx = toContext(base.slice(0, -1)).slice(-HISTORY_WINDOW);
+    const ctx = toContext(base.slice(0, -1)).slice(-getHistoryWindow());
     setSending(true);
     setError(null);
     try {
@@ -1009,6 +1017,7 @@ export function LivingRoom() {
           <div className="flex-1 relative">
             <div className="absolute inset-0 neu-pressed rounded-[24px] -z-10" />
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1026,6 +1035,7 @@ export function LivingRoom() {
                 color: "var(--text-deep)",
                 maxHeight: "120px",
                 lineHeight: "24px",
+                overflowY: input && textareaRef.current && textareaRef.current.scrollHeight > 120 ? "auto" : "hidden",
               }}
             />
           </div>

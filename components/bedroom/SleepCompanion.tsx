@@ -11,7 +11,7 @@ import {
   SAVE_FAVORITE_TOOL,
   type ChatMode,
 } from "@/lib/brain/personality";
-import { HISTORY_WINDOW, toContext } from "@/lib/brain/memory";
+import { getHistoryWindow, toContext } from "@/lib/brain/memory";
 import { sendChat } from "@/lib/brain/client";
 import { saveChatMessage, loadChatMessages, clearChatMessages } from "@/lib/brain/db";
 import type { LLMMessage } from "@/lib/brain/personality";
@@ -199,7 +199,7 @@ export function SleepCompanion() {
     try {
       const ctx: LLMMessage[] = base
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .slice(-HISTORY_WINDOW)
+        .slice(-getHistoryWindow())
         .map((m) => ({ role: m.role, content: m.content }));
 
       const userText = ctx[ctx.length - 1].content;
