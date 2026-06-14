@@ -18,7 +18,7 @@ import {
   type ChatMode,
 } from "@/lib/brain/personality";
 import { getHistoryWindow, toContext, type ChatMessage } from "@/lib/brain/memory";
-import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
+import { sendChat, fetchEmbedding, type SavedMemoryInfo } from "@/lib/brain/client";
 import type { BedroomPresets, BedroomSession } from "@/lib/brain/bedroom";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -199,7 +199,7 @@ export function IntimateChat() {
     setSending(true);
     setError(null);
     try {
-      // Build bedroom-specific messages via API
+      const queryEmbedding = await fetchEmbedding(last.content, settings);
       const { buildBedroomMessages } = await import("@/lib/brain/bedroom");
       const assembled = await buildBedroomMessages(
         ctx,
@@ -207,6 +207,7 @@ export function IntimateChat() {
         mode,
         activeSession.presets ?? {},
         activeSession.transition_context,
+        queryEmbedding,
       );
       const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, UPDATE_SURFACE_PERSONALITY_TOOL], "bedroom");
       const { inner, parts } = parseReply(resp.content, mode);

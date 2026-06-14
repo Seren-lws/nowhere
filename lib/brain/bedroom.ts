@@ -159,13 +159,14 @@ export async function buildBedroomMessages(
   mode: ChatMode,
   presets: BedroomPresets,
   transitionContext?: { role: string; content: string }[] | null | undefined,
+  queryEmbedding?: number[],
 ): Promise<LLMMessage[]> {
   const [layers, profiles, anchors, relevant, recent, samples, timelineEvents] =
     await Promise.all([
       fetchPersonalityLayers(),
       fetchProfileMemories(),
       fetchAnchorMemories(),
-      retrieveMemories({ query: userText, limit: 10 }),
+      retrieveMemories({ query: userText, limit: 10, queryEmbedding }),
       fetchRecentMemories(10),
       fetchRecentAssistantMessages("bedroom", 3),
       fetchTimelineEvents(10),

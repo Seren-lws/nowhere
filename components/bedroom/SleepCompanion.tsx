@@ -12,7 +12,7 @@ import {
   type ChatMode,
 } from "@/lib/brain/personality";
 import { getHistoryWindow, toContext } from "@/lib/brain/memory";
-import { sendChat } from "@/lib/brain/client";
+import { sendChat, fetchEmbedding } from "@/lib/brain/client";
 import { saveChatMessage, loadChatMessages, clearChatMessages } from "@/lib/brain/db";
 import type { LLMMessage } from "@/lib/brain/personality";
 
@@ -205,7 +205,8 @@ export function SleepCompanion() {
       const userText = ctx[ctx.length - 1].content;
       const history = ctx.slice(0, -1);
 
-      const assembled = await buildMessages(history, userText, "passage" as ChatMode);
+      const queryEmbedding = typeof userText === "string" ? await fetchEmbedding(userText, settings) : [];
+      const assembled = await buildMessages(history, userText, "passage" as ChatMode, queryEmbedding);
       assembled[0] = {
         role: "system",
         content: assembled[0].content + "\n\n" + SLEEP_SYSTEM,

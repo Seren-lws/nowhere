@@ -35,7 +35,7 @@ import {
 } from "@/lib/brain/memory";
 import { clearChatMessages } from "@/lib/brain/db";
 import { STICKER_PACKS, ALL_STICKERS } from "@/lib/stickers";
-import { sendChat, type SavedMemoryInfo } from "@/lib/brain/client";
+import { sendChat, fetchEmbedding, type SavedMemoryInfo } from "@/lib/brain/client";
 import { supabase } from "@/lib/supabase";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -242,7 +242,9 @@ export function LivingRoom() {
           ];
         }
       } catch {}
-      const assembled = await buildMessages(ctx, userContent, mode);
+      const queryText = typeof userContent === "string" ? userContent : "";
+      const queryEmbedding = queryText ? await fetchEmbedding(queryText, settings) : [];
+      const assembled = await buildMessages(ctx, userContent, mode, queryEmbedding);
       const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, SEND_STICKER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, UPDATE_SURFACE_PERSONALITY_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);

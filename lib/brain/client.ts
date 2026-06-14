@@ -43,6 +43,7 @@ export async function sendChat(
         baseUrl: settings.baseUrl,
         apiKey: settings.apiKey,
         model: settings.chatModel,
+        embeddingModel: settings.embeddingModel,
         tavilyKey: settings.tavilyKey,
         elevenLabsKey: settings.elevenLabsKey,
         elevenLabsVoiceId: settings.elevenLabsVoiceId,
@@ -56,6 +57,30 @@ export async function sendChat(
     throw new Error(e.error || `请求失败 (${res.status})`);
   }
   return (await res.json()) as ChatResponse;
+}
+
+export async function fetchEmbedding(
+  text: string,
+  settings: BrainSettings,
+): Promise<number[]> {
+  if (!settings.embeddingModel) return [];
+  try {
+    const res = await fetch("/api/embedding", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text,
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+        model: settings.embeddingModel,
+      }),
+    });
+    if (!res.ok) return [];
+    const { embedding } = await res.json();
+    return embedding ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function testConnection(

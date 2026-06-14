@@ -97,6 +97,17 @@ export async function saveMemoryItem(item: {
   return data.id;
 }
 
+export async function updateMemoryEmbedding(
+  id: string,
+  embedding: number[],
+): Promise<void> {
+  const { error } = await supabase
+    .from("memory_items")
+    .update({ embedding: JSON.stringify(embedding) })
+    .eq("id", id);
+  if (error) throw new Error(`保存向量失败: ${error.message}`);
+}
+
 export async function clearChatMessages(room = "living-room"): Promise<void> {
   const { error } = await supabase
     .from("chat_messages")

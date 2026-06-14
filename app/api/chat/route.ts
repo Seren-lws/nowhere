@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { saveMemoryItem } from "@/lib/brain/db";
+import { saveMemoryItem, updateMemoryEmbedding } from "@/lib/brain/db";
 import { createDiary, getLastChatTime } from "@/lib/brain/diary";
 import { addFavorite } from "@/lib/brain/favorites";
+import { generateEmbedding } from "@/lib/brain/embedding";
 import { supabase } from "@/lib/supabase";
 import { ALL_STICKERS } from "@/lib/stickers";
 
@@ -19,7 +20,7 @@ interface SavedFavorite {
 
 interface ChatRequest {
   messages: { role: string; content: unknown }[];
-  config: { baseUrl: string; apiKey: string; model: string; tavilyKey?: string; elevenLabsKey?: string; elevenLabsVoiceId?: string };
+  config: { baseUrl: string; apiKey: string; model: string; embeddingModel?: string; tavilyKey?: string; elevenLabsKey?: string; elevenLabsVoiceId?: string };
   tools?: unknown[];
   room?: string;
 }
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
         if (tc.function.name === "save_memory") {
           try {
             const args = JSON.parse(tc.function.arguments);
-            await saveMemoryItem({
+            const memId = await saveMemoryItem({
               content: args.content,
               type: args.type,
               valence: args.valence,
@@ -150,6 +151,11 @@ export async function POST(req: Request) {
               tags: args.tags,
               is_anchor: args.is_anchor,
             });
+            if (config.embeddingModel) {
+              generateEmbedding(args.content, config.baseUrl, config.apiKey, config.embeddingModel)
+                .then((emb) => updateMemoryEmbedding(memId, emb))
+                .catch(() => {});
+            }
             savedMemories.push({
               content: args.content,
               type: args.type,

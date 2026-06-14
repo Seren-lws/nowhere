@@ -18,11 +18,16 @@ export interface RetrievalOptions {
   type?: MemoryType[];
   anchorOnly?: boolean;
   limit?: number;
+  queryEmbedding?: number[];
 }
 
 export async function retrieveMemories(
   options: RetrievalOptions,
 ): Promise<MemoryItem[]> {
+  if (options.queryEmbedding && options.queryEmbedding.length > 0 && !options.anchorOnly) {
+    return retrieveByVector(options.queryEmbedding, options.limit ?? 10);
+  }
+
   let q = supabase.from("memory_items").select("*");
 
   if (options.anchorOnly) {
@@ -50,6 +55,31 @@ export async function retrieveMemories(
   const { data, error } = await q;
   if (error) return [];
   return data ?? [];
+}
+
+async function retrieveByVector(
+  embedding: number[],
+  limit: number,
+): Promise<MemoryItem[]> {
+  const { data, error } = await supabase.rpc("match_memories", {
+    query_embedding: JSON.stringify(embedding),
+    match_threshold: 0.3,
+    match_count: limit,
+  });
+  if (error || !data) return [];
+  return data.map((row: MemoryItem & { similarity: number }) => ({
+    id: row.id,
+    content: row.content,
+    type: row.type,
+    temperature: row.temperature,
+    decay_level: row.decay_level,
+    valence: row.valence,
+    arousal: row.arousal,
+    is_anchor: row.is_anchor,
+    tags: row.tags,
+    source_ref: row.source_ref,
+    created_at: row.created_at,
+  }));
 }
 
 export async function fetchAnchorMemories(): Promise<MemoryItem[]> {

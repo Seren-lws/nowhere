@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: BrainSettings = {
   apiKey: "",
   chatModel: "gpt-4o",
   gardenerModel: "gpt-4o-mini",
-  embeddingModel: "text-embedding-3-small",
+  embeddingModel: "gemini-embedding-001",
   barkKey: "",
   barkIcon: "🐘",
   tavilyKey: "",

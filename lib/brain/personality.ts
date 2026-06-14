@@ -490,6 +490,7 @@ export async function buildMessages(
   history: LLMMessage[],
   userContent: string | ContentPart[],
   mode: ChatMode,
+  queryEmbedding?: number[],
 ): Promise<LLMMessage[]> {
   const queryText = typeof userContent === "string"
     ? userContent
@@ -499,7 +500,7 @@ export async function buildMessages(
     fetchPersonalityLayers(),
     fetchProfileMemories(),
     fetchAnchorMemories(),
-    retrieveMemories({ query: queryText, limit: 10 }),
+    retrieveMemories({ query: queryText, limit: 10, queryEmbedding }),
     fetchRecentMemories(10),
     fetchRecentAssistantMessages("living-room", 3),
     fetchTimelineEvents(10),
