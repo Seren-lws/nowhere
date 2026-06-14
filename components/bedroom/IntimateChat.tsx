@@ -220,7 +220,7 @@ export function IntimateChat() {
         const memMsg: ChatMessage = { role: "memory", content: "", ts: t++, memories: resp.savedMemories };
         acc.push(memMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "memory", JSON.stringify({ memories: resp.savedMemories })).then((dbId) => { memMsg.dbId = dbId; });
+        try { memMsg.dbId = await saveMsg(activeSessionId, "memory", JSON.stringify({ memories: resp.savedMemories })); } catch {}
       }
 
       if (resp.savedFavorites && resp.savedFavorites.length > 0) {
@@ -229,7 +229,7 @@ export function IntimateChat() {
         const favMsg: ChatMessage = { role: "fav-notify", content: favContent, ts: t++ };
         acc.push(favMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "fav-notify", favContent).then((dbId) => { favMsg.dbId = dbId; });
+        try { favMsg.dbId = await saveMsg(activeSessionId, "fav-notify", favContent); } catch {}
       }
 
       if (resp.searchQuery) {
@@ -237,7 +237,7 @@ export function IntimateChat() {
         const searchMsg: ChatMessage = { role: "search-notify", content: resp.searchQuery, ts: t++ };
         acc.push(searchMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "search-notify", resp.searchQuery).then((dbId) => { searchMsg.dbId = dbId; });
+        try { searchMsg.dbId = await saveMsg(activeSessionId, "search-notify", resp.searchQuery); } catch {}
       }
 
       if (inner) {
@@ -245,7 +245,7 @@ export function IntimateChat() {
         const innerMsg: ChatMessage = { role: "inner", content: inner, ts: t++ };
         acc.push(innerMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "inner", inner).then((dbId) => { innerMsg.dbId = dbId; });
+        try { innerMsg.dbId = await saveMsg(activeSessionId, "inner", inner); } catch {}
       }
 
       for (const p of parts) {
@@ -253,7 +253,7 @@ export function IntimateChat() {
         const asstMsg: ChatMessage = { role: "assistant", content: p, ts: t++ };
         acc.push(asstMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "assistant", p).then((dbId) => { asstMsg.dbId = dbId; });
+        try { asstMsg.dbId = await saveMsg(activeSessionId, "assistant", p); } catch {}
       }
 
       if (resp.diaryWritten) {
@@ -261,7 +261,7 @@ export function IntimateChat() {
         const diaryMsg: ChatMessage = { role: "tool-notify", content: "diary", ts: t++ };
         acc.push(diaryMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "tool-notify", "diary").then((dbId) => { diaryMsg.dbId = dbId; });
+        try { diaryMsg.dbId = await saveMsg(activeSessionId, "tool-notify", "diary"); } catch {}
       }
 
       if (resp.timelineEvent) {
@@ -270,7 +270,7 @@ export function IntimateChat() {
         const tlMsg: ChatMessage = { role: "tool-notify", content: tlContent, ts: t++ };
         acc.push(tlMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "tool-notify", tlContent).then((dbId) => { tlMsg.dbId = dbId; });
+        try { tlMsg.dbId = await saveMsg(activeSessionId, "tool-notify", tlContent); } catch {}
       }
 
       if (resp.reminderSet) {
@@ -279,7 +279,7 @@ export function IntimateChat() {
         const remMsg: ChatMessage = { role: "tool-notify", content: remContent, ts: t++ };
         acc.push(remMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "tool-notify", remContent).then((dbId) => { remMsg.dbId = dbId; });
+        try { remMsg.dbId = await saveMsg(activeSessionId, "tool-notify", remContent); } catch {}
       }
 
       if (resp.personalityRequest) {
@@ -287,7 +287,7 @@ export function IntimateChat() {
         const perMsg: ChatMessage = { role: "tool-notify", content: "personality", ts: t++ };
         acc.push(perMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "tool-notify", "personality").then((dbId) => { perMsg.dbId = dbId; });
+        try { perMsg.dbId = await saveMsg(activeSessionId, "tool-notify", "personality"); } catch {}
       }
 
       if (resp.surfaceUpdate) {
@@ -296,7 +296,7 @@ export function IntimateChat() {
         const surfMsg: ChatMessage = { role: "tool-notify", content: surfContent, ts: t++ };
         acc.push(surfMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "tool-notify", surfContent).then((dbId) => { surfMsg.dbId = dbId; });
+        try { surfMsg.dbId = await saveMsg(activeSessionId, "tool-notify", surfContent); } catch {}
       }
 
       if (resp.voiceMessage) {
@@ -305,7 +305,7 @@ export function IntimateChat() {
         const voiceMsg: ChatMessage = { role: "voice", content: voiceContent, ts: t++ };
         acc.push(voiceMsg);
         setMessages([...acc]);
-        saveMsg(activeSessionId, "voice", voiceContent).then((dbId) => { voiceMsg.dbId = dbId; });
+        try { voiceMsg.dbId = await saveMsg(activeSessionId, "voice", voiceContent); } catch {}
       }
     } catch (e) {
       setSending(false);
