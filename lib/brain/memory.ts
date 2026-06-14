@@ -100,7 +100,7 @@ export async function saveMessageToDb(
 }
 
 export async function loadHistoryFromDb(): Promise<ChatMessage[]> {
-  const rows = await loadChatMessages("living-room", 200);
+  const rows = await loadChatMessages("living-room", 500);
   return rows.map((r) => {
     const msg: ChatMessage = {
       role: r.role as ChatRole,

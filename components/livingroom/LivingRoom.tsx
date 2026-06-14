@@ -2273,6 +2273,7 @@ function isStickerMessage(content: string): boolean {
 
 function StickerBubble({ data, align }: { data: string; align: "left" | "right" }) {
   const [zoomed, setZoomed] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   let parsed: { type: string; stickerId: string; url: string; alt: string; caption?: string };
   try {
@@ -2291,14 +2292,26 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
       >
         <div
           className="cursor-pointer active:scale-95 transition-transform"
-          onClick={() => setZoomed(true)}
+          onClick={() => !imgError && setZoomed(true)}
         >
-          <img
-            src={parsed.url}
-            alt={parsed.alt}
-            className="w-[120px] h-[120px] object-cover rounded-xl"
-            loading="lazy"
-          />
+          {imgError ? (
+            <div
+              className="w-[120px] h-[120px] rounded-xl flex items-center justify-center text-center p-2"
+              style={{ background: "rgba(230,225,225,0.5)", border: "1px solid rgba(255,255,255,0.3)" }}
+            >
+              <span className="text-[12px] leading-tight" style={{ color: "var(--text-faint)", fontFamily: "var(--font-serif-sc)" }}>
+                {parsed.alt || "表情包"}
+              </span>
+            </div>
+          ) : (
+            <img
+              src={parsed.url}
+              alt={parsed.alt}
+              className="w-[120px] h-[120px] object-cover rounded-xl"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
+          )}
         </div>
         {parsed.caption && (
           <div
