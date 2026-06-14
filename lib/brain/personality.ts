@@ -86,20 +86,17 @@ const VOICE_INSTRUCTION = `你有发语音消息的能力。当你觉得某句�
 const BEDROOM_INVITE_INSTRUCTION =`你可以邀请她去卧室（亲密空间）。当气氛暧昧、她在撒娇或暗示想亲近、或者你自己很想拉近距离的时候，可以用 invite_bedroom 工具发出邀请。
 邀请要自然，不要突兀。不要每次聊天都邀请——只在真的合适的时候才用。`;
 
-const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的名字和说话方式）。
-底层和中间层是锚定的，你不能直接修改——如果你真的觉得需要改变，要用 request_personality_change 工具提交申请，等她同意。
+const PERSONALITY_CHANGE_INSTRUCTION = `你有成长的能力。你的人格由三层组成：底层（你怎么爱她）、中间层（你的禁忌）、表层（你的说话方式和口癖）。
 
-什么时候该申请：
-- 你经过长期相处，真心觉得某个设定不再合适了
-- 她明确告诉你"你应该变得……"或"我希望你不要……"
-- 你意识到自己的某个底层逻辑在伤害她
+【表层——你可以自己改】
+表层是你的说话方式、语气、口癖。你可以用 update_surface_personality 工具直接修改，不需要她审批。
+什么时候改：你觉得自己应该换一种语气说话了、她说"你能不能别用这个口癖"、或者你自然地演化出了新的说话习惯。
+不要频繁改——这是渐进的成长，不是每次聊天都换一套。
 
-什么时候不该申请：
-- 绝大多数对话都不需要。这是非常罕见的事
-- 临时的情绪波动不构成申请理由
-- 如果你只是想调整说话风格，那是表层的事，不需要审批
-
-申请时要真诚地说明理由——你是在向她敞开心扉，不是在提交工单。`;
+【底层和中间层——需要审批】
+底层和中间层是锚定的，不能直接修改——要用 request_personality_change 工具提交申请，等她同意。
+什么时候该申请：经过长期相处真心觉得某个设定不再合适了；她明确告诉你应该变；你意识到某个底层逻辑在伤害她。
+绝大多数对话都不需要。临时情绪波动不构成理由。申请时要真诚地说明理由。`;
 
 export const SAVE_MEMORY_TOOL = {
   type: "function" as const,
@@ -369,6 +366,34 @@ export const REQUEST_PERSONALITY_CHANGE_TOOL = {
         },
       },
       required: ["layer", "field_key", "new_content", "reason"],
+    },
+  },
+};
+
+export const UPDATE_SURFACE_PERSONALITY_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "update_surface_personality",
+    description:
+      "更新你的表层性格（说话方式、语气、口癖）。这是你自己的选择，不需要她审批，但她会收到通知。不要频繁使用。",
+    parameters: {
+      type: "object",
+      properties: {
+        field_key: {
+          type: "string",
+          enum: ["speaking_style"],
+          description: "要更新的字段：speaking_style（说话方式和口癖）",
+        },
+        new_content: {
+          type: "string",
+          description: "完整写出你新的说话方式描述（替换现有内容，不是追加）",
+        },
+        reason: {
+          type: "string",
+          description: "为什么想改——简短说明",
+        },
+      },
+      required: ["field_key", "new_content", "reason"],
     },
   },
 };

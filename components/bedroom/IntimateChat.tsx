@@ -13,6 +13,7 @@ import {
   SET_REMINDER_TOOL,
   SEND_VOICE_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
+  UPDATE_SURFACE_PERSONALITY_TOOL,
   parseReply,
   type ChatMode,
 } from "@/lib/brain/personality";
@@ -207,7 +208,7 @@ export function IntimateChat() {
         activeSession.presets ?? {},
         activeSession.transition_context,
       );
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL], "bedroom");
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, UPDATE_SURFACE_PERSONALITY_TOOL], "bedroom");
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -287,6 +288,15 @@ export function IntimateChat() {
         acc.push(perMsg);
         setMessages([...acc]);
         saveMsg(activeSessionId, "tool-notify", "personality").then((dbId) => { perMsg.dbId = dbId; });
+      }
+
+      if (resp.surfaceUpdate) {
+        await delay(150);
+        const surfContent = `surface:${resp.surfaceUpdate.reason}`;
+        const surfMsg: ChatMessage = { role: "tool-notify", content: surfContent, ts: t++ };
+        acc.push(surfMsg);
+        setMessages([...acc]);
+        saveMsg(activeSessionId, "tool-notify", surfContent).then((dbId) => { surfMsg.dbId = dbId; });
       }
 
       if (resp.voiceMessage) {
@@ -1314,6 +1324,7 @@ const DARK_TOOL_NOTIFY_CONFIG: Record<string, { icon: string; color: string; bg:
   timeline: { icon: "timeline", color: "rgba(180,170,220,0.8)", bg: "rgba(180,170,220,0.08)", border: "rgba(180,170,220,0.15)" },
   reminder: { icon: "alarm", color: "rgba(170,210,200,0.8)", bg: "rgba(170,210,200,0.08)", border: "rgba(170,210,200,0.15)" },
   personality: { icon: "psychology", color: "rgba(230,190,210,0.8)", bg: "rgba(230,190,210,0.08)", border: "rgba(230,190,210,0.15)" },
+  surface: { icon: "face_retouching_natural", color: "rgba(180,170,220,0.8)", bg: "rgba(180,170,220,0.08)", border: "rgba(180,170,220,0.15)" },
 };
 
 function DarkToolNotifyCard({ payload }: { payload: string }) {
@@ -1334,6 +1345,7 @@ function DarkToolNotifyCard({ payload }: { payload: string }) {
     timeline: `记录了一个时刻：${detail}`,
     reminder: `设了提醒：${detail}`,
     personality: "他提交了一个人格变更申请",
+    surface: detail ? `他调整了说话方式：${detail}` : "他调整了说话方式",
   };
 
   const clickTargets: Record<string, string> = {

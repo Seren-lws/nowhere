@@ -15,6 +15,7 @@ import {
   WEB_SEARCH_TOOL,
   SET_REMINDER_TOOL,
   REQUEST_PERSONALITY_CHANGE_TOOL,
+  UPDATE_SURFACE_PERSONALITY_TOOL,
   SEND_VOICE_TOOL,
   SEND_STICKER_TOOL,
   INVITE_BEDROOM_TOOL,
@@ -242,7 +243,7 @@ export function LivingRoom() {
         }
       } catch {}
       const assembled = await buildMessages(ctx, userContent, mode);
-      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, SEND_STICKER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, INVITE_BEDROOM_TOOL]);
+      const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, SEND_STICKER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, UPDATE_SURFACE_PERSONALITY_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
 
@@ -337,6 +338,16 @@ export function LivingRoom() {
         setMessages([...acc]);
         saveHistory(acc);
         saveMessageToDb("tool-notify", "personality").then((dbId) => { perMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
+      }
+
+      if (resp.surfaceUpdate) {
+        await delay(150);
+        const surfContent = `surface:${resp.surfaceUpdate.reason}`;
+        const surfMsg: ChatMessage = { role: "tool-notify", content: surfContent, ts: t++ };
+        acc.push(surfMsg);
+        setMessages([...acc]);
+        saveHistory(acc);
+        saveMessageToDb("tool-notify", surfContent).then((dbId) => { surfMsg.dbId = dbId; saveHistory(acc); }).catch(() => {});
       }
 
       if (resp.voiceMessage) {
@@ -2483,6 +2494,7 @@ const TOOL_NOTIFY_CONFIG: Record<string, { icon: string; color: string; bg: stri
   timeline: { icon: "timeline", color: "var(--accent-wisteria)", bg: "rgba(103,87,126,0.08)", border: "rgba(103,87,126,0.15)" },
   reminder: { icon: "alarm", color: "#6b8f7a", bg: "rgba(107,143,122,0.08)", border: "rgba(107,143,122,0.15)" },
   personality: { icon: "psychology", color: "var(--primary)", bg: "rgba(212,165,165,0.12)", border: "rgba(212,165,165,0.2)" },
+  surface: { icon: "face_retouching_natural", color: "var(--accent-wisteria)", bg: "rgba(103,87,126,0.08)", border: "rgba(103,87,126,0.15)" },
 };
 
 function ToolNotifyCard({ payload }: { payload: string }) {
@@ -2503,6 +2515,7 @@ function ToolNotifyCard({ payload }: { payload: string }) {
     timeline: `记录了一个时刻：${detail}`,
     reminder: `设了提醒：${detail}`,
     personality: "他提交了一个人格变更申请",
+    surface: detail ? `他调整了说话方式：${detail}` : "他调整了说话方式",
   };
 
   const clickTargets: Record<string, string> = {

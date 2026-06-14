@@ -23,6 +23,7 @@ export interface ChatResponse {
   timelineEvent?: string;
   reminderSet?: string;
   personalityRequest?: boolean;
+  surfaceUpdate?: { field_key: string; reason: string };
   voiceMessage?: { text: string; audioUrl: string };
   stickerMessage?: { stickerId: string; url: string; alt: string };
 }

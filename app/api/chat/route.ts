@@ -54,6 +54,7 @@ export async function POST(req: Request) {
   let timelineEvent: string | null = null;
   let reminderSet: string | null = null;
   let personalityRequest = false;
+  let surfaceUpdate: { field_key: string; reason: string } | null = null;
   let voiceMessage: { text: string; audioUrl: string } | null = null;
   let stickerMessage: { stickerId: string; url: string; alt: string } | null = null;
 
@@ -397,6 +398,40 @@ export async function POST(req: Request) {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        } else if (tc.function.name === "update_surface_personality") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const { data: existing } = await supabase
+              .from("personality_layers")
+              .select("id, version")
+              .eq("layer", "surface")
+              .eq("field_key", args.field_key)
+              .single();
+
+            if (existing) {
+              await supabase
+                .from("personality_layers")
+                .update({
+                  content: args.new_content,
+                  version: existing.version + 1,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", existing.id);
+            } else {
+              await supabase.from("personality_layers").insert({
+                layer: "surface",
+                field_key: args.field_key,
+                content: args.new_content,
+                version: 1,
+              });
+            }
+            surfaceUpdate = { field_key: args.field_key, reason: args.reason };
+          } catch (e) {
+            result = JSON.stringify({
+              ok: false,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         }
 
         currentMessages.push({
@@ -425,6 +460,7 @@ export async function POST(req: Request) {
       ...(timelineEvent ? { timelineEvent } : {}),
       ...(reminderSet ? { reminderSet } : {}),
       ...(personalityRequest ? { personalityRequest } : {}),
+      ...(surfaceUpdate ? { surfaceUpdate } : {}),
       ...(voiceMessage ? { voiceMessage } : {}),
       ...(stickerMessage ? { stickerMessage } : {}),
     });
