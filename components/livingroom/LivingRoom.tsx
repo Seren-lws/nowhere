@@ -2262,13 +2262,28 @@ function isImageMessage(content: string): boolean {
   }
 }
 
+const STICKER_TEXT_RE = /^\[发送了表情包：(.+?)\]\s*(.*)$/;
+
 function isStickerMessage(content: string): boolean {
   try {
     const p = JSON.parse(content);
-    return p?.type === "sticker" && !!p.url;
-  } catch {
-    return false;
+    if (p?.type === "sticker" && !!p.url) return true;
+  } catch {}
+  const m = content.trim().match(STICKER_TEXT_RE);
+  if (m) {
+    const alt = m[1];
+    return !!ALL_STICKERS.find((s) => s.alt === alt || s.alt.includes(alt) || alt.includes(s.alt));
   }
+  return false;
+}
+
+function resolveStickerFromText(content: string): { url: string; alt: string; stickerId: string; caption?: string } | null {
+  const m = content.trim().match(STICKER_TEXT_RE);
+  if (!m) return null;
+  const alt = m[1];
+  const caption = m[2]?.trim() || undefined;
+  const sticker = ALL_STICKERS.find((s) => s.alt === alt || s.alt.includes(alt) || alt.includes(s.alt));
+  return sticker ? { url: sticker.url, alt: sticker.alt, stickerId: sticker.id, caption } : null;
 }
 
 function StickerBubble({ data, align }: { data: string; align: "left" | "right" }) {
@@ -2277,9 +2292,12 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
 
   let parsed: { type: string; stickerId: string; url: string; alt: string; caption?: string };
   try {
-    parsed = JSON.parse(data);
+    const j = JSON.parse(data);
+    parsed = j;
   } catch {
-    return null;
+    const resolved = resolveStickerFromText(data);
+    if (!resolved) return null;
+    parsed = { type: "sticker", stickerId: resolved.stickerId, url: resolved.url, alt: resolved.alt, caption: resolved.caption };
   }
 
   return (
