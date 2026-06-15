@@ -139,7 +139,7 @@ export function HisFavoritesList() {
             />
           ) : (
             <h1
-              className="text-[28px] font-bold tracking-tight flex-1 text-center"
+              className="text-[22px] font-bold tracking-tight flex-1 text-center"
               style={{ color: "#5d5451" }}
             >
               他的收藏
@@ -289,7 +289,7 @@ function HisChatCard({
         <span className="text-xs">我的原话</span>
       </div>
       <p
-        className="text-lg leading-relaxed"
+        className="text-sm leading-relaxed"
         style={{ color: "#5d5451" }}
       >
         &ldquo;{item.content}&rdquo;
@@ -341,7 +341,7 @@ function HisDiaryCard({
         <span className="text-xs" style={{ color: "rgba(93,84,81,0.7)" }}>我的日记</span>
       </div>
       <p
-        className="text-base leading-relaxed"
+        className="text-sm leading-relaxed"
         style={{ color: "#5d5451" }}
       >
         {item.content}
@@ -399,7 +399,7 @@ function HisBedroomCard({
             className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
           >
             <div
-              className="px-4 py-3 max-w-[85%] text-base"
+              className="px-4 py-3 max-w-[85%] text-sm leading-relaxed"
               style={{
                 borderRadius:
                   msg.role === "user"
@@ -481,7 +481,7 @@ function HisImageCard({
           <span className="text-xs" style={{ color: "rgba(93,84,81,0.7)" }}>她的图片</span>
         </div>
         {item.content && item.content !== "图片" && (
-          <p className="text-base leading-relaxed mb-3" style={{ color: "#5d5451" }}>
+          <p className="text-sm leading-relaxed mb-3" style={{ color: "#5d5451" }}>
             {item.content}
           </p>
         )}

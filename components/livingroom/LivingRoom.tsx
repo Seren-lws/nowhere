@@ -1187,11 +1187,11 @@ function Bubble({
       >
         <div
           onClick={onSelect}
-          className="rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap"
+          className="rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap"
           style={{
             fontFamily: "var(--font-serif-sc)",
-            fontSize: "14.5px",
-            lineHeight: "24px",
+            fontSize: "13px",
+            lineHeight: "21px",
             background: "#ffdad9",
             boxShadow: selected
               ? "0 0 0 2px rgba(123,84,85,0.3), 6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff"
@@ -1245,11 +1245,11 @@ function Bubble({
       className="flex flex-col items-start gap-2"
     >
       <div
-        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[80%] whitespace-pre-wrap select-none"
+        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap select-none"
         style={{
           fontFamily: "var(--font-serif-sc)",
-          fontSize: "14.5px",
-          lineHeight: "24px",
+          fontSize: "13px",
+          lineHeight: "21px",
           color: "var(--text-deep)",
           cursor: onFavorite ? "pointer" : "default",
         }}
@@ -2356,8 +2356,8 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
             className={`mt-1.5 rounded-[20px] ${align === "right" ? "rounded-br-[4px]" : "rounded-bl-[4px]"} px-4 py-2.5 max-w-[80%] whitespace-pre-wrap`}
             style={{
               fontFamily: "var(--font-serif-sc)",
-              fontSize: "14.5px",
-              lineHeight: "24px",
+              fontSize: "13px",
+              lineHeight: "21px",
               background: align === "right" ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)",
               backdropFilter: "blur(12px)",
               border: "1px solid rgba(255,255,255,0.4)",
@@ -2448,8 +2448,8 @@ function ImageBubble({ data, onFavorite }: { data: string; onFavorite?: () => vo
               background: "#ffdad9",
               boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
               fontFamily: "var(--font-serif-sc)",
-              fontSize: "14.5px",
-              lineHeight: "24px",
+              fontSize: "13px",
+              lineHeight: "21px",
               color: "var(--text-deep)",
             }}
           >

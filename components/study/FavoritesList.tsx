@@ -162,7 +162,7 @@ export function FavoritesList() {
             />
           ) : (
             <h1
-              className="text-[28px] font-bold tracking-tight flex-1 text-center"
+              className="text-[22px] font-bold tracking-tight flex-1 text-center"
               style={{ color: "var(--primary)" }}
             >
               我的收藏
@@ -321,13 +321,13 @@ function ChatCard({
       </button>
       <div className="flex flex-col gap-4">
         <span
-          className="text-xl"
+          className="text-lg"
           style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(123,84,85,0.6)" }}
         >
           Whisper
         </span>
         <p
-          className="text-lg leading-relaxed italic"
+          className="text-sm leading-relaxed italic"
           style={{ color: "var(--text-deep)" }}
         >
           &ldquo;{item.content}&rdquo;
@@ -382,7 +382,7 @@ function DiaryCard({
           </span>
         </div>
         <p
-          className="text-2xl leading-relaxed opacity-80"
+          className="text-lg leading-relaxed opacity-80"
           style={{
             fontFamily: "'Zhi Mang Xing', cursive",
             color: "var(--text-mid)",
@@ -426,7 +426,7 @@ function BedroomCard({
           className={`flex flex-col gap-2 max-w-[85%] ${msg.role === "user" ? "self-end" : "self-start"}`}
         >
           <div
-            className="px-5 py-3"
+            className="px-5 py-3 text-sm leading-relaxed"
             style={{
               borderRadius: msg.role === "user" ? "24px 24px 0 24px" : "24px 24px 24px 0",
               ...(msg.role === "user"
@@ -532,14 +532,14 @@ function VoiceCard({
             </span>
           </button>
           <span
-            className="text-xl"
+            className="text-lg"
             style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(107,143,122,0.6)" }}
           >
             Voice
           </span>
         </div>
         <p
-          className="text-base leading-relaxed italic"
+          className="text-sm leading-relaxed italic"
           style={{ color: "var(--text-deep)" }}
         >
           &ldquo;{cleanText}&rdquo;
@@ -588,7 +588,7 @@ function ImageCard({
       />
       <div className="p-6">
         {item.content && item.content !== "图片" && (
-          <p className="text-base leading-relaxed mb-3" style={{ color: "var(--text-deep)" }}>
+          <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-deep)" }}>
             {item.content}
           </p>
         )}

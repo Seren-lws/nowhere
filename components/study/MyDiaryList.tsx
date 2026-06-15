@@ -88,7 +88,7 @@ export function MyDiaryList() {
           >
             <span className="material-symbols-outlined text-2xl text-white">arrow_back</span>
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-white">我的日记</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white">我的日记</h1>
         </div>
         <div className="flex items-center gap-4">
           <button className="active:scale-95 transition-transform" onClick={toggleSearch}>
@@ -304,7 +304,7 @@ function DiaryCard({
       {/* Date Row */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold" style={{ color: "#ecbbba" }}>
+          <span className="text-base font-bold" style={{ color: "#ecbbba" }}>
             {display}
           </span>
           <span className="text-sm opacity-60">{weekday}</span>
@@ -314,7 +314,7 @@ function DiaryCard({
 
       {/* Content Preview */}
       <p
-        className="leading-relaxed text-lg mb-6"
+        className="leading-relaxed text-sm mb-6"
         style={{
           color: "rgba(255,255,255,0.9)",
           display: "-webkit-box",
