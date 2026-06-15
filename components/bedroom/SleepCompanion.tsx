@@ -15,6 +15,7 @@ import { getHistoryWindow, toContext } from "@/lib/brain/memory";
 import { sendChat, fetchEmbedding } from "@/lib/brain/client";
 import { saveChatMessage, loadChatMessages, clearChatMessages } from "@/lib/brain/db";
 import type { LLMMessage } from "@/lib/brain/personality";
+import { writeRoomHandoff } from "@/lib/brain/handoff";
 
 /* ─── Types ─── */
 
@@ -102,6 +103,15 @@ export function SleepCompanion() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // 睡前最后说的话也存为"交接上下文"，第二天回客厅能接上
+  useEffect(() => {
+    if (messages.length === 0) return;
+    writeRoomHandoff(
+      "bedroom",
+      messages.map((m) => ({ role: m.role, content: m.content })),
+    );
+  }, [messages]);
 
   useEffect(() => {
     return () => {

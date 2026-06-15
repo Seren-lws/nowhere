@@ -20,6 +20,21 @@ import {
 import { getHistoryWindow, toContext, type ChatMessage } from "@/lib/brain/memory";
 import { sendChat, fetchEmbedding, type SavedMemoryInfo } from "@/lib/brain/client";
 import type { BedroomPresets, BedroomSession } from "@/lib/brain/bedroom";
+import { writeRoomHandoff, type HandoffMsg } from "@/lib/brain/handoff";
+
+/** 把聊天消息转成纯文本上下文，供跨房间交接用 */
+function toHandoffContext(msgs: ChatMessage[]): HandoffMsg[] {
+  return toContext(msgs).map((m) => ({
+    role: m.role,
+    content:
+      typeof m.content === "string"
+        ? m.content
+        : m.content
+            .filter((p): p is { type: "text"; text: string } => p.type === "text")
+            .map((p) => p.text)
+            .join(" ") || "[图片]",
+  }));
+}
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -67,6 +82,12 @@ export function IntimateChat() {
     setSettings(s);
     loadSessions();
   }, []);
+
+  // 把卧室最近的对话存为"交接上下文"，下次回客厅时他能接上（隔夜也算）
+  useEffect(() => {
+    if (messages.length === 0) return;
+    writeRoomHandoff("bedroom", toHandoffContext(messages));
+  }, [messages]);
 
   useEffect(() => {
     const el = textareaRef.current;

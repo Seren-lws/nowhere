@@ -486,11 +486,22 @@ export function formatInstruction(mode: ChatMode): string {
 （你真正对她说的话。${shape}）`;
 }
 
+function bedroomTransitionToPrompt(
+  ctx: { role: string; content: string }[] | null | undefined,
+): string {
+  if (!ctx || ctx.length === 0) return "";
+  const lines = ctx.map(
+    (m) => `${m.role === "user" ? "她" : "你"}：${m.content}`,
+  );
+  return `【上次在卧室的对话（你们刚从那边过来，可能是昨晚聊到这里——自然地接住，不要装作不记得）】\n${lines.join("\n")}`;
+}
+
 export async function buildMessages(
   history: LLMMessage[],
   userContent: string | ContentPart[],
   mode: ChatMode,
   queryEmbedding?: number[],
+  transitionContext?: { role: string; content: string }[] | null,
 ): Promise<LLMMessage[]> {
   const queryText = typeof userContent === "string"
     ? userContent
@@ -530,9 +541,12 @@ export async function buildMessages(
   });
   const timeContext = `【当前时间】${tokyoTime}（东京时间）`;
 
+  const transPrompt = bedroomTransitionToPrompt(transitionContext);
+
   const systemParts = [
     personalityPrompt,
     profilePrompt,
+    transPrompt,
     timeContext,
     MEMORY_INSTRUCTION,
     FAVORITE_INSTRUCTION,

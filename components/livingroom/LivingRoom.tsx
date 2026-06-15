@@ -34,6 +34,7 @@ import {
   type DiaryShareData,
 } from "@/lib/brain/memory";
 import { clearChatMessages } from "@/lib/brain/db";
+import { consumeRoomHandoff, type HandoffMsg } from "@/lib/brain/handoff";
 import { STICKER_PACKS, ALL_STICKERS } from "@/lib/stickers";
 import { sendChat, fetchEmbedding, type SavedMemoryInfo } from "@/lib/brain/client";
 import { supabase } from "@/lib/supabase";
@@ -65,10 +66,13 @@ export function LivingRoom() {
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // 从卧室/睡眠陪伴回来的对话上下文，下一次回复时注入一次后清空
+  const pendingHandoffRef = useRef<HandoffMsg[] | null>(null);
 
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
+    pendingHandoffRef.current = consumeRoomHandoff("bedroom");
 
     (async () => {
       let h: ChatMessage[] = [];
@@ -244,7 +248,9 @@ export function LivingRoom() {
       } catch {}
       const queryText = typeof userContent === "string" ? userContent : "";
       const queryEmbedding = queryText ? await fetchEmbedding(queryText, settings) : [];
-      const assembled = await buildMessages(ctx, userContent, mode, queryEmbedding);
+      const handoff = pendingHandoffRef.current;
+      pendingHandoffRef.current = null; // 只注入一次
+      const assembled = await buildMessages(ctx, userContent, mode, queryEmbedding, handoff);
       const resp = await sendChat(assembled, settings, [SAVE_MEMORY_TOOL, SAVE_FAVORITE_TOOL, WRITE_DIARY_TOOL, SAVE_TIMELINE_TOOL, WEB_SEARCH_TOOL, SET_REMINDER_TOOL, SEND_VOICE_TOOL, SEND_STICKER_TOOL, REQUEST_PERSONALITY_CHANGE_TOOL, UPDATE_SURFACE_PERSONALITY_TOOL, INVITE_BEDROOM_TOOL]);
       const { inner, parts } = parseReply(resp.content, mode);
       setSending(false);
