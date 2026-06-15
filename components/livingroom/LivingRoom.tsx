@@ -590,7 +590,7 @@ export function LivingRoom() {
       </div>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-16 bg-[#fdf8f8]/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-12 bg-[#fdf8f8]/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
         <div className="flex items-center gap-3">
           <button
             className="p-2 rounded-full hover:bg-[#f2eded] transition-colors active:scale-95"
@@ -602,7 +602,7 @@ export function LivingRoom() {
           </button>
           <div className="flex flex-col">
             <span
-              className="text-[16px] font-medium"
+              className="text-[13.5px] font-medium"
               style={{ letterSpacing: "2px", color: "var(--text-deep)", fontFamily: "var(--font-serif-sc)" }}
             >
               {DEFAULT_NAME}
@@ -1050,12 +1050,12 @@ export function LivingRoom() {
               rows={1}
               placeholder={pendingImage ? "添加文字说明（可选）" : pendingSticker ? "配一句话（可选）" : ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
               disabled={!ready || sending}
-              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[16px] resize-none disabled:opacity-60"
+              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[13.5px] resize-none disabled:opacity-60"
               style={{
                 fontFamily: "var(--font-serif-sc)",
                 color: "var(--text-deep)",
                 maxHeight: "120px",
-                lineHeight: "24px",
+                lineHeight: "20px",
                 overflowY: input && textareaRef.current && textareaRef.current.scrollHeight > 120 ? "auto" : "hidden",
               }}
             />
@@ -1190,7 +1190,7 @@ function Bubble({
           className="rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap"
           style={{
             fontFamily: "var(--font-serif-sc)",
-            fontSize: "13px",
+            fontSize: "13.5px",
             lineHeight: "21px",
             background: "#ffdad9",
             boxShadow: selected
@@ -1248,7 +1248,7 @@ function Bubble({
         className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap select-none"
         style={{
           fontFamily: "var(--font-serif-sc)",
-          fontSize: "13px",
+          fontSize: "13.5px",
           lineHeight: "21px",
           color: "var(--text-deep)",
           cursor: onFavorite ? "pointer" : "default",
@@ -2356,7 +2356,7 @@ function StickerBubble({ data, align }: { data: string; align: "left" | "right" 
             className={`mt-1.5 rounded-[20px] ${align === "right" ? "rounded-br-[4px]" : "rounded-bl-[4px]"} px-4 py-2.5 max-w-[80%] whitespace-pre-wrap`}
             style={{
               fontFamily: "var(--font-serif-sc)",
-              fontSize: "13px",
+              fontSize: "13.5px",
               lineHeight: "21px",
               background: align === "right" ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)",
               backdropFilter: "blur(12px)",
@@ -2448,7 +2448,7 @@ function ImageBubble({ data, onFavorite }: { data: string; onFavorite?: () => vo
               background: "#ffdad9",
               boxShadow: "6px 6px 12px #e0dbdb, -6px -6px 12px #ffffff",
               fontFamily: "var(--font-serif-sc)",
-              fontSize: "13px",
+              fontSize: "13.5px",
               lineHeight: "21px",
               color: "var(--text-deep)",
             }}
