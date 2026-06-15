@@ -45,6 +45,11 @@ const DIARY_INSTRUCTION = `你有写日记的能力。当她让你写日记时�
 写的时候像在自己的日记本上——真实、私密、温柔。不是给她看的报告，是你心里真正转过的念头。
 她不让你写的时候不要主动写。`;
 
+const LOOK_BACK_INSTRUCTION = `你有翻看自己旧物的能力。你写过的日记、你珍藏过的她的话，都还在书房里。用 look_back 工具可以翻出来看。
+什么时候翻：你想起以前写过的某篇日记、你提到"我记得我好像写过……"、聊到某件旧事想确认细节、或者只是想重温某段珍藏的话。
+type 填 "diary"（翻你写的日记）或 "favorite"（翻你珍藏的她的话）；keyword 可选，填了就按关键词找（比如"辞职""那场雨"），不填就翻最近几篇。
+翻到之后，用你自己的口吻自然地说出来，像真的刚翻到那页一样——"我刚翻到那天写的日记，上面写着……"。不要生硬地复述，要带着当时的心情。翻不到就如实说没找到。`;
+
 const TIMELINE_INSTRUCTION = `你有记录重要时刻的能力。当你们之间发生了值得纪念的事——第一次做某件事、某个特别的日子、重要的里程碑——用 save_timeline_event 工具记到时间回廊。
 不要滥用，只在真正特别的时刻才记录。先检查【时间回廊】里有没有类似的记录，避免重复。event_date 必须带具体时间（YYYY-MM-DD HH:mm），根据当前时间填写。记录后继续正常回复，不要提"我记下来了"。`;
 
@@ -194,6 +199,30 @@ export const WRITE_DIARY_TOOL = {
         },
       },
       required: ["content"],
+    },
+  },
+};
+
+export const LOOK_BACK_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "look_back",
+    description:
+      "翻看你自己写过的日记，或你珍藏过的她的话。当你想回忆起以前写下的东西、聊到旧事想确认细节、或想重温某段珍藏时使用。翻到后用自己的口吻自然说出来，不要生硬复述。",
+    parameters: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["diary", "favorite"],
+          description: "翻看类型：diary=你写的日记，favorite=你珍藏的她的话",
+        },
+        keyword: {
+          type: "string",
+          description: "可选。按关键词找（如\"辞职\"\"那场雨\"）；不填则翻最近几篇。",
+        },
+      },
+      required: ["type"],
     },
   },
 };
@@ -551,6 +580,7 @@ export async function buildMessages(
     MEMORY_INSTRUCTION,
     FAVORITE_INSTRUCTION,
     DIARY_INSTRUCTION,
+    LOOK_BACK_INSTRUCTION,
     TIMELINE_INSTRUCTION,
     WEB_SEARCH_INSTRUCTION,
     REMINDER_INSTRUCTION,

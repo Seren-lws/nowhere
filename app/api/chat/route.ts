@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveMemoryItem, updateMemoryEmbedding } from "@/lib/brain/db";
-import { createDiary, getLastChatTime } from "@/lib/brain/diary";
+import { createDiary, getLastChatTime, fetchDiaries } from "@/lib/brain/diary";
 import { addFavorite } from "@/lib/brain/favorites";
 import { generateEmbedding } from "@/lib/brain/embedding";
 import { supabase } from "@/lib/supabase";
@@ -277,6 +277,45 @@ export async function POST(req: Request) {
               ok: false,
               error: e instanceof Error ? e.message : String(e),
             });
+          }
+        } else if (tc.function.name === "look_back") {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const keyword: string | undefined = args.keyword?.trim() || undefined;
+            if (args.type === "favorite") {
+              let fq = supabase
+                .from("favorites")
+                .select("content, created_at, source")
+                .eq("owner", "companion")
+                .order("created_at", { ascending: false })
+                .limit(keyword ? 8 : 5);
+              if (keyword) fq = fq.ilike("content", `%${keyword}%`);
+              const { data: favs } = await fq;
+              if (!favs || favs.length === 0) {
+                result = JSON.stringify({ ok: true, type: "favorite", found: 0, note: keyword ? `没找到和"${keyword}"有关的珍藏` : "你还没有珍藏过她的话" });
+              } else {
+                result = JSON.stringify({
+                  ok: true,
+                  type: "favorite",
+                  found: favs.length,
+                  items: favs.map((f: { content: string; created_at: string }) => ({ date: f.created_at?.slice(0, 10), content: f.content })),
+                });
+              }
+            } else {
+              const diaries = await fetchDiaries("companion", keyword ? 8 : 5, keyword);
+              if (diaries.length === 0) {
+                result = JSON.stringify({ ok: true, type: "diary", found: 0, note: keyword ? `没找到和"${keyword}"有关的日记` : "你还没有写过日记" });
+              } else {
+                result = JSON.stringify({
+                  ok: true,
+                  type: "diary",
+                  found: diaries.length,
+                  items: diaries.map((d) => ({ date: d.created_at?.slice(0, 10), mood: d.mood, content: d.content })),
+                });
+              }
+            }
+          } catch (e) {
+            result = JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) });
           }
         } else if (tc.function.name === "set_reminder") {
           try {
