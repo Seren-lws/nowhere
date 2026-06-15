@@ -721,11 +721,25 @@ export function LivingRoom() {
                 ) : m.role === "search-notify" ? (
                   <SearchNotifyCard query={m.content} />
                 ) : m.role === "voice" ? (
-                  <VoiceBubble data={m.content} onFavorite={() => favoriteVoice(m.content, m.ts)} />
+                  <MessageRow side="left" avatarSrc={profile.companionAvatar} fallback={profile.companionName || "他"}>
+                    <VoiceBubble data={m.content} onFavorite={() => favoriteVoice(m.content, m.ts)} />
+                  </MessageRow>
                 ) : isStickerMessage(m.content) ? (
-                  <StickerBubble data={m.content} align={m.role === "user" ? "right" : "left"} />
+                  <MessageRow
+                    side={m.role === "user" ? "right" : "left"}
+                    avatarSrc={m.role === "user" ? profile.userAvatar : profile.companionAvatar}
+                    fallback={m.role === "user" ? (profile.userName || "我") : (profile.companionName || "他")}
+                  >
+                    <StickerBubble data={m.content} align={m.role === "user" ? "right" : "left"} />
+                  </MessageRow>
                 ) : isImageMessage(m.content) ? (
-                  <ImageBubble data={m.content} onFavorite={() => favoriteImage(m.content, m.ts)} />
+                  <MessageRow
+                    side={m.role === "user" ? "right" : "left"}
+                    avatarSrc={m.role === "user" ? profile.userAvatar : profile.companionAvatar}
+                    fallback={m.role === "user" ? (profile.userName || "我") : (profile.companionName || "他")}
+                  >
+                    <ImageBubble data={m.content} onFavorite={() => favoriteImage(m.content, m.ts)} />
+                  </MessageRow>
                 ) : m.role === "tool-notify" ? (
                   <ToolNotifyCard payload={m.content} />
                 ) : m.role === "bedroom-invite" ? (
@@ -1217,6 +1231,28 @@ function ChatAvatar({ src, fallback }: { src?: string; fallback: string }) {
           {fallback.trim().slice(0, 1) || "·"}
         </span>
       )}
+    </div>
+  );
+}
+
+/** 给语音/图片/表情包等自带气泡套上头像（微信1对1：他的在左、你的在右） */
+function MessageRow({
+  side,
+  avatarSrc,
+  fallback,
+  children,
+}: {
+  side: "left" | "right";
+  avatarSrc?: string;
+  fallback: string;
+  children: React.ReactNode;
+}) {
+  const avatar = <ChatAvatar src={avatarSrc} fallback={fallback} />;
+  return (
+    <div className="flex items-start gap-2">
+      {side === "left" && avatar}
+      <div className="flex-1 min-w-0">{children}</div>
+      {side === "right" && avatar}
     </div>
   );
 }
