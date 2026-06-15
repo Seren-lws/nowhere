@@ -36,6 +36,7 @@ import {
 } from "@/lib/brain/memory";
 import { clearChatMessages } from "@/lib/brain/db";
 import { consumeRoomHandoff, type HandoffMsg } from "@/lib/brain/handoff";
+import { loadProfile, type ChatProfile, DEFAULT_PROFILE } from "@/lib/brain/profile";
 import { STICKER_PACKS, ALL_STICKERS } from "@/lib/stickers";
 import { sendChat, fetchEmbedding, type SavedMemoryInfo } from "@/lib/brain/client";
 import { supabase } from "@/lib/supabase";
@@ -61,6 +62,7 @@ export function LivingRoom() {
   const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
   const [pendingSticker, setPendingSticker] = useState<{ id: string; url: string; alt: string } | null>(null);
   const [atBottom, setAtBottom] = useState(true);
+  const [profile, setProfile] = useState<ChatProfile>(DEFAULT_PROFILE);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -73,6 +75,7 @@ export function LivingRoom() {
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
+    setProfile(loadProfile());
     pendingHandoffRef.current = consumeRoomHandoff("bedroom");
 
     (async () => {
@@ -95,6 +98,19 @@ export function LivingRoom() {
         triggerAutoDiary(s);
       }
     })();
+  }, []);
+
+  // 从「头像昵称」设置页改完返回时，页面可能不会重新挂载——回到前台时刷新一次
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") setProfile(loadProfile());
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   const triggerAutoDiary = async (s: BrainSettings) => {
@@ -605,7 +621,7 @@ export function LivingRoom() {
               className="text-[13.5px] font-medium"
               style={{ letterSpacing: "2px", color: "var(--text-deep)", fontFamily: "var(--font-serif-sc)" }}
             >
-              {DEFAULT_NAME}
+              {profile.companionName || DEFAULT_NAME}
             </span>
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full" />
@@ -649,6 +665,20 @@ export function LivingRoom() {
                     delete_sweep
                   </span>
                   清空聊天
+                </button>
+                <div className="h-px bg-black/5" />
+                <button
+                  className="w-full flex items-center gap-2 px-4 py-3 text-[14px] hover:bg-black/5 transition-colors"
+                  style={{ fontFamily: "var(--font-serif-sc)", color: "var(--text-deep)" }}
+                  onClick={() => {
+                    setShowMenu(false);
+                    router.push("/settings/profile");
+                  }}
+                >
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--primary)" }}>
+                    account_circle
+                  </span>
+                  头像昵称
                 </button>
                 <div className="h-px bg-black/5" />
                 <button
@@ -719,6 +749,10 @@ export function LivingRoom() {
                         ? () => favoriteChat(m.content, m.ts)
                         : undefined
                     }
+                    userAvatar={profile.userAvatar}
+                    companionAvatar={profile.companionAvatar}
+                    userName={profile.userName}
+                    companionName={profile.companionName}
                   />
                 )}
               </div>
@@ -731,17 +765,24 @@ export function LivingRoom() {
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-3 py-2"
             >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center pulse-orb"
-                style={{ background: "#ecbbba" }}
-              >
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
+              {profile.companionAvatar ? (
+                <div className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 pulse-orb" style={{ border: "1px solid rgba(255,255,255,0.6)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={profile.companionAvatar} alt="" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center pulse-orb"
+                  style={{ background: "#ecbbba" }}
                 >
-                  favorite
-                </span>
-              </div>
+                  <span
+                    className="material-symbols-outlined text-[16px]"
+                    style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
+                  >
+                    favorite
+                  </span>
+                </div>
+              )}
               <span className="text-[12px] italic" style={{ color: "var(--text-faint)" }}>
                 正在思考...
               </span>
@@ -1048,7 +1089,7 @@ export function LivingRoom() {
                 }
               }}
               rows={1}
-              placeholder={pendingImage ? "添加文字说明（可选）" : pendingSticker ? "配一句话（可选）" : ready ? `想对${DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
+              placeholder={pendingImage ? "添加文字说明（可选）" : pendingSticker ? "配一句话（可选）" : ready ? `想对${profile.companionName || DEFAULT_NAME}说点什么…` : "先去设置接上他的大脑"}
               disabled={!ready || sending}
               className="w-full bg-transparent border-none focus:ring-0 focus:outline-none px-5 py-3 text-[13.5px] resize-none disabled:opacity-60"
               style={{
@@ -1156,6 +1197,30 @@ function ModeSwitcher({ mode, setMode }: { mode: ChatMode; setMode: (m: ChatMode
   );
 }
 
+/* ─── Avatar ─── */
+
+function ChatAvatar({ src, fallback }: { src?: string; fallback: string }) {
+  return (
+    <div
+      className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center select-none"
+      style={{
+        background: src ? "transparent" : "#ffdad9",
+        border: "1px solid rgba(255,255,255,0.6)",
+        boxShadow: "3px 3px 6px #e0dbdb, -3px -3px 6px #ffffff",
+      }}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <span className="text-[15px]" style={{ color: "var(--primary)", fontFamily: "var(--font-serif-sc)" }}>
+          {fallback.trim().slice(0, 1) || "·"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /* ─── Bubble ─── */
 
 function Bubble({
@@ -1166,6 +1231,10 @@ function Bubble({
   onEditResend,
   onRetry,
   onFavorite,
+  userAvatar,
+  companionAvatar,
+  userName,
+  companionName,
 }: {
   role: ChatMessage["role"];
   content: string;
@@ -1174,6 +1243,10 @@ function Bubble({
   onEditResend?: () => void;
   onRetry?: () => void;
   onFavorite?: () => void;
+  userAvatar?: string;
+  companionAvatar?: string;
+  userName?: string;
+  companionName?: string;
 }) {
   const urls = extractUrls(content);
 
@@ -1183,11 +1256,12 @@ function Bubble({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="flex flex-col items-end gap-2"
+        className="flex items-start justify-end gap-2"
       >
+        <div className="flex flex-col items-end gap-2 min-w-0 max-w-[82%]">
         <div
           onClick={onSelect}
-          className="rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap"
+          className="rounded-xl px-3.5 py-2.5 max-w-full whitespace-pre-wrap"
           style={{
             fontFamily: "var(--font-serif-sc)",
             fontSize: "13.5px",
@@ -1216,6 +1290,8 @@ function Bubble({
             <ActionPill onClick={onRetry}>↻ 重新回复</ActionPill>
           </motion.div>
         )}
+        </div>
+        <ChatAvatar src={userAvatar} fallback={userName || "我"} />
       </motion.div>
     );
   }
@@ -1242,10 +1318,12 @@ function Bubble({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col items-start gap-2"
+      className="flex items-start gap-2"
     >
+      <ChatAvatar src={companionAvatar} fallback={companionName || "他"} />
+      <div className="flex flex-col items-start gap-2 min-w-0 max-w-[82%]">
       <div
-        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-[88%] whitespace-pre-wrap select-none"
+        className="neu-flat rounded-xl px-3.5 py-2.5 max-w-full whitespace-pre-wrap select-none"
         style={{
           fontFamily: "var(--font-serif-sc)",
           fontSize: "13.5px",
@@ -1287,6 +1365,7 @@ function Bubble({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
