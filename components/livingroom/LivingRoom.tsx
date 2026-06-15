@@ -766,7 +766,7 @@ export function LivingRoom() {
               className="flex items-center gap-3 py-2"
             >
               {profile.companionAvatar ? (
-                <div className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 pulse-orb" style={{ border: "1px solid rgba(255,255,255,0.6)" }}>
+                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 pulse-orb" style={{ border: "1px solid rgba(255,255,255,0.6)" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={profile.companionAvatar} alt="" className="w-full h-full object-cover" />
                 </div>
@@ -1202,7 +1202,7 @@ function ModeSwitcher({ mode, setMode }: { mode: ChatMode; setMode: (m: ChatMode
 function ChatAvatar({ src, fallback }: { src?: string; fallback: string }) {
   return (
     <div
-      className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center select-none"
+      className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center select-none"
       style={{
         background: src ? "transparent" : "#ffdad9",
         border: "1px solid rgba(255,255,255,0.6)",
