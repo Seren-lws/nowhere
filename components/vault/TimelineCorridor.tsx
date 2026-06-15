@@ -472,10 +472,12 @@ export function TimelineCorridor() {
               let cardIdx = 0;
 
               return sortedDates.map((dateKey) => {
-                // 同一天内：也从新到旧
-                const dayEvents = grouped.get(dateKey)!.sort(
-                  (a, b) => parseEventDate(b.event_date).getTime() - parseEventDate(a.event_date).getTime(),
-                );
+                // 同一天内：也从新到旧。有具体时间按时间，没时间的退而用"记录时间"(created_at)
+                const dayEvents = grouped.get(dateKey)!.sort((a, b) => {
+                  const diff = parseEventDate(b.event_date).getTime() - parseEventDate(a.event_date).getTime();
+                  if (diff !== 0) return diff;
+                  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
                 const d = new Date(dateKey + "T00:00:00");
                 const dateLabel = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
                 const ago = daysAgo(dateKey);
