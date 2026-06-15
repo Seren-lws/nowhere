@@ -450,190 +450,241 @@ export function TimelineCorridor() {
             </p>
           </div>
         ) : (
-          <div className="relative min-h-[400px] py-4">
-            {/* Central timeline line */}
+          <div className="relative min-h-[400px] py-4 pl-6">
+            {/* Left-aligned timeline line */}
             <div
-              className="absolute left-1/2 -translate-x-1/2 w-[2px] top-0 bottom-0"
+              className="absolute left-[18px] w-[2px] top-0 bottom-0"
               style={{
                 background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.35), transparent)",
               }}
             />
 
-            {events.map((evt, i) => {
-              const isLeft = i % 2 === 0;
-              const ago = daysAgo(evt.event_date);
-              const floatDelay = `${(i * 1.5) % 6}s`;
+            {(() => {
+              const grouped = new Map<string, TimelineEvent[]>();
+              for (const evt of events) {
+                const d = parseEventDate(evt.event_date);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                if (!grouped.has(key)) grouped.set(key, []);
+                grouped.get(key)!.push(evt);
+              }
+              // 日期组：从新到旧
+              const sortedDates = [...grouped.keys()].sort((a, b) => b.localeCompare(a));
+              let cardIdx = 0;
 
-              return (
-                <div key={evt.id} className="relative mb-20">
-                  {/* Pulse glow dot */}
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full z-10"
-                    style={{
-                      background: "#ffdad9",
-                      boxShadow: "0 0 15px #7b5455",
-                      animation: "pulse-dot 3s ease-in-out infinite",
-                      top: 4,
-                    }}
-                  />
+              return sortedDates.map((dateKey) => {
+                // 同一天内：也从新到旧
+                const dayEvents = grouped.get(dateKey)!.sort(
+                  (a, b) => parseEventDate(b.event_date).getTime() - parseEventDate(a.event_date).getTime(),
+                );
+                const d = new Date(dateKey + "T00:00:00");
+                const dateLabel = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                const ago = daysAgo(dateKey);
 
-                  {/* Card — alternating sides */}
-                  <div className={`flex ${isLeft ? "justify-end pr-[calc(50%+1.5rem)]" : "justify-start pl-[calc(50%+1.5rem)]"}`}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(i * 0.15, 0.6), duration: 0.5, ease: [0.175, 0.885, 0.32, 1.275] }}
-                      className="rounded-2xl p-5 w-full max-w-[280px] group relative"
-                      style={{
-                        background: "rgba(255,255,255,0.1)",
-                        backdropFilter: "blur(40px)",
-                        WebkitBackdropFilter: "blur(40px)",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        boxShadow: "0 8px 32px rgba(123,84,85,0.12)",
-                        animation: `gentle-float 6s ease-in-out infinite`,
-                        animationDelay: floatDelay,
-                      }}
-                    >
-                      {editingId === evt.id ? (
-                        /* ─── Inline edit form ─── */
-                        <div className="flex flex-col gap-2">
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full border-none outline-none rounded-lg p-2"
-                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "14px", color: "white", background: "rgba(255,255,255,0.1)" }}
-                            autoFocus
+                return (
+                  <div key={dateKey} className="mb-8">
+                    {/* Date group header */}
+                    <div className="relative flex items-center mb-5 ml-6">
+                      <div
+                        className="absolute -left-[30px] w-3 h-3 rounded-full z-10"
+                        style={{
+                          background: "#ffdad9",
+                          boxShadow: "0 0 15px #7b5455",
+                          animation: "pulse-dot 3s ease-in-out infinite",
+                        }}
+                      />
+                      <h3
+                        className="text-[14px] font-semibold tracking-wide"
+                        style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.9)" }}
+                      >
+                        {dateLabel}
+                      </h3>
+                      <span
+                        className="ml-2 text-[11px]"
+                        style={{ color: "rgba(255,255,255,0.35)" }}
+                      >
+                        {ago}
+                      </span>
+                    </div>
+
+                    {/* Events within this date */}
+                    {dayEvents.map((evt) => {
+                      const idx = cardIdx++;
+                      const floatDelay = `${(idx * 1.5) % 6}s`;
+                      const d2 = parseEventDate(evt.event_date);
+                      const h = d2.getHours();
+                      const m = d2.getMinutes();
+                      const hasTime = h !== 0 || m !== 0 || evt.event_date.includes(":");
+                      const timeStr = hasTime ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}` : "";
+
+                      return (
+                        <div key={evt.id} className="relative mb-5 ml-6">
+                          {/* Small dot on the line */}
+                          <div
+                            className="absolute -left-[32px] top-[18px] w-[9px] h-[9px] rounded-full z-10"
+                            style={{
+                              background: "rgba(255,218,217,0.6)",
+                              boxShadow: "0 0 8px rgba(123,84,85,0.4)",
+                            }}
                           />
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            placeholder="补充内容…（可选）"
-                            className="w-full border-none outline-none resize-none rounded-lg p-2"
-                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "13px", color: "white", background: "rgba(255,255,255,0.1)", minHeight: "40px" }}
-                          />
-                          <input
-                            type="datetime-local"
-                            value={editDate.replace(" ", "T")}
-                            onChange={(e) => setEditDate(e.target.value.replace("T", " "))}
-                            className="border-none outline-none rounded-lg p-2"
-                            style={{ fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "white", background: "rgba(255,255,255,0.1)", colorScheme: "dark" }}
-                          />
-                          <div className="flex gap-1 flex-wrap">
-                            {ICON_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                className="w-7 h-7 rounded-md flex items-center justify-center text-[14px]"
-                                style={{
-                                  background: editIcon === opt.value ? "rgba(255,218,217,0.2)" : "transparent",
-                                  border: editIcon === opt.value ? "1px solid rgba(255,218,217,0.4)" : "1px solid transparent",
-                                }}
-                                onClick={() => setEditIcon(opt.value)}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex gap-2 justify-end mt-1">
-                            <button
-                              className="px-3 py-1.5 rounded-full text-[12px]"
-                              style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-                              onClick={() => setEditingId(null)}
-                            >
-                              取消
-                            </button>
-                            <button
-                              className="px-3 py-1.5 rounded-full text-[12px] active:scale-95"
-                              style={{ fontFamily: "var(--font-serif-sc)", color: "white", background: "rgba(123,84,85,0.7)" }}
-                              onClick={saveEdit}
-                            >
-                              保存
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* ─── Display mode ─── */
-                        <div
-                          className="cursor-pointer"
-                          onClick={() => setActiveId(activeId === evt.id ? null : evt.id)}
-                        >
-                          <h3
-                            className="text-[15px] font-semibold mb-2"
-                            style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.95)" }}
+
+                          {/* Card — always right side */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(idx * 0.1, 0.5), duration: 0.5, ease: [0.175, 0.885, 0.32, 1.275] }}
+                            className="rounded-2xl p-5 group relative"
+                            style={{
+                              background: "rgba(255,255,255,0.1)",
+                              backdropFilter: "blur(40px)",
+                              WebkitBackdropFilter: "blur(40px)",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              boxShadow: "0 8px 32px rgba(123,84,85,0.12)",
+                              animation: `gentle-float 6s ease-in-out infinite`,
+                              animationDelay: floatDelay,
+                            }}
                           >
-                            {evt.title} · {formatDateLabel(evt.event_date)}
-                          </h3>
-
-                          {evt.content && (
-                            <p
-                              className="text-[13px] leading-relaxed"
-                              style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}
-                            >
-                              {evt.content}
-                            </p>
-                          )}
-
-                          <div className="mt-3 flex items-center gap-2 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                            <span style={{ fontFamily: "var(--font-serif-sc)" }}>{ago}</span>
-                            <span>·</span>
-                            <span style={{ fontFamily: "var(--font-serif-sc)" }}>{SOURCE_LABEL[evt.source] ?? evt.source}</span>
-                          </div>
-
-                          {/* Action bar — tap to reveal */}
-                          <AnimatePresence>
-                            {activeId === evt.id && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
-                                <div
-                                  className="mt-3 pt-3 flex gap-2"
-                                  style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
+                            {editingId === evt.id ? (
+                              /* ─── Inline edit form ─── */
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="text"
+                                  value={editTitle}
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  className="w-full border-none outline-none rounded-lg p-2"
+                                  style={{ fontFamily: "var(--font-serif-sc)", fontSize: "14px", color: "white", background: "rgba(255,255,255,0.1)" }}
+                                  autoFocus
+                                />
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  placeholder="补充内容…（可选）"
+                                  className="w-full border-none outline-none resize-none rounded-lg p-2"
+                                  style={{ fontFamily: "var(--font-serif-sc)", fontSize: "13px", color: "white", background: "rgba(255,255,255,0.1)", minHeight: "40px" }}
+                                />
+                                <input
+                                  type="datetime-local"
+                                  value={editDate.replace(" ", "T")}
+                                  onChange={(e) => setEditDate(e.target.value.replace("T", " "))}
+                                  className="border-none outline-none rounded-lg p-2"
+                                  style={{ fontFamily: "var(--font-serif-sc)", fontSize: "12px", color: "white", background: "rgba(255,255,255,0.1)", colorScheme: "dark" }}
+                                />
+                                <div className="flex gap-1 flex-wrap">
+                                  {ICON_OPTIONS.map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      className="w-7 h-7 rounded-md flex items-center justify-center text-[14px]"
+                                      style={{
+                                        background: editIcon === opt.value ? "rgba(255,218,217,0.2)" : "transparent",
+                                        border: editIcon === opt.value ? "1px solid rgba(255,218,217,0.4)" : "1px solid transparent",
+                                      }}
+                                      onClick={() => setEditIcon(opt.value)}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="flex gap-2 justify-end mt-1">
                                   <button
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
-                                    style={{
-                                      fontFamily: "var(--font-serif-sc)",
-                                      color: "rgba(255,255,255,0.7)",
-                                      background: "rgba(255,255,255,0.1)",
-                                      border: "1px solid rgba(255,255,255,0.15)",
-                                    }}
-                                    onClick={() => startEdit(evt)}
+                                    className="px-3 py-1.5 rounded-full text-[12px]"
+                                    style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+                                    onClick={() => setEditingId(null)}
                                   >
-                                    <span className="material-symbols-outlined text-[14px]">edit</span>
-                                    编辑
+                                    取消
                                   </button>
                                   <button
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
-                                    style={{
-                                      fontFamily: "var(--font-serif-sc)",
-                                      color: "rgba(255,255,255,0.7)",
-                                      background: "rgba(255,255,255,0.1)",
-                                      border: "1px solid rgba(255,255,255,0.15)",
-                                    }}
-                                    onClick={() => deleteEvent(evt.id)}
+                                    className="px-3 py-1.5 rounded-full text-[12px] active:scale-95"
+                                    style={{ fontFamily: "var(--font-serif-sc)", color: "white", background: "rgba(123,84,85,0.7)" }}
+                                    onClick={saveEdit}
                                   >
-                                    <span className="material-symbols-outlined text-[14px]">delete</span>
-                                    删除
+                                    保存
                                   </button>
                                 </div>
-                              </motion.div>
+                              </div>
+                            ) : (
+                              /* ─── Display mode ─── */
+                              <div
+                                className="cursor-pointer"
+                                onClick={() => setActiveId(activeId === evt.id ? null : evt.id)}
+                              >
+                                <h3
+                                  className="text-[15px] font-semibold mb-2"
+                                  style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,218,217,0.95)" }}
+                                >
+                                  {timeStr && <span className="text-[12px] font-normal mr-2" style={{ color: "rgba(255,255,255,0.45)" }}>{timeStr}</span>}
+                                  {evt.title}
+                                </h3>
+
+                                {evt.content && (
+                                  <p
+                                    className="text-[13px] leading-relaxed"
+                                    style={{ fontFamily: "var(--font-serif-sc)", color: "rgba(255,255,255,0.7)" }}
+                                  >
+                                    {evt.content}
+                                  </p>
+                                )}
+
+                                <div className="mt-3 flex items-center gap-2 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                  <span style={{ fontFamily: "var(--font-serif-sc)" }}>{SOURCE_LABEL[evt.source] ?? evt.source}</span>
+                                </div>
+
+                                {/* Action bar — tap to reveal */}
+                                <AnimatePresence>
+                                  {activeId === evt.id && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div
+                                        className="mt-3 pt-3 flex gap-2"
+                                        style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
+                                          style={{
+                                            fontFamily: "var(--font-serif-sc)",
+                                            color: "rgba(255,255,255,0.7)",
+                                            background: "rgba(255,255,255,0.1)",
+                                            border: "1px solid rgba(255,255,255,0.15)",
+                                          }}
+                                          onClick={() => startEdit(evt)}
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                                          编辑
+                                        </button>
+                                        <button
+                                          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] active:scale-95 transition-all"
+                                          style={{
+                                            fontFamily: "var(--font-serif-sc)",
+                                            color: "rgba(255,255,255,0.7)",
+                                            background: "rgba(255,255,255,0.1)",
+                                            border: "1px solid rgba(255,255,255,0.15)",
+                                          }}
+                                          onClick={() => deleteEvent(evt.id)}
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                                          删除
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
                             )}
-                          </AnimatePresence>
+                          </motion.div>
                         </div>
-                      )}
-                    </motion.div>
+                      );
+                    })}
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
 
             {/* Future placeholder */}
-            <div className="relative mt-8 text-center">
+            <div className="relative mt-8 ml-6 text-center">
               <div
                 className="inline-block px-6 py-2 rounded-full text-[13px]"
                 style={{
