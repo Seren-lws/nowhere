@@ -313,7 +313,7 @@ function ChatCard({
       }}
     >
       <button
-        className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-6 right-6 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "var(--text-faint)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -363,7 +363,7 @@ function DiaryCard({
       }}
     >
       <button
-        className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-6 right-6 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "var(--text-faint)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -413,7 +413,7 @@ function BedroomCard({
   return (
     <div className="group relative p-4 flex flex-col gap-4">
       <button
-        className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-0 right-0 z-10 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "var(--text-faint)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -511,7 +511,7 @@ function VoiceCard({
       }}
     >
       <button
-        className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-6 right-6 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "var(--text-faint)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -574,7 +574,7 @@ function ImageCard({
       }}
     >
       <button
-        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
+        className="absolute top-4 right-4 z-10 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
         style={{ color: "white", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         onClick={() => onDelete(item.id)}
       >

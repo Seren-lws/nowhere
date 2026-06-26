@@ -278,7 +278,7 @@ function HisChatCard({
       }}
     >
       <button
-        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "rgba(93,84,81,0.5)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -328,7 +328,7 @@ function HisDiaryCard({
       }}
     >
       <button
-        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "rgba(93,84,81,0.5)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -379,7 +379,7 @@ function HisBedroomCard({
       }}
     >
       <button
-        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90"
+        className="absolute top-4 right-4 z-10 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90"
         style={{ color: "rgba(93,84,81,0.5)" }}
         onClick={() => onDelete(item.id)}
       >
@@ -461,7 +461,7 @@ function HisImageCard({
       }}
     >
       <button
-        className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
+        className="absolute top-4 right-4 z-10 opacity-50 hover:opacity-100 transition-opacity p-2 active:scale-90 rounded-full"
         style={{ color: "white", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}
         onClick={() => onDelete(item.id)}
       >
