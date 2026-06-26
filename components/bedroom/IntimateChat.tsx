@@ -503,7 +503,9 @@ export function IntimateChat() {
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <span className="text-[22px]" style={{ fontFamily: "'Pinyon Script', cursive", color: "rgba(255,255,255,0.7)" }}>Sanctuary</span>
-          <div className="w-10" />
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => router.push("/settings")} aria-label="设置">
+            <span className="material-symbols-outlined text-[22px]">settings</span>
+          </button>
         </header>
 
         <main className="h-full flex flex-col items-center justify-center px-6 gap-6">
@@ -663,6 +665,9 @@ export function IntimateChat() {
         </div>
 
         <div className="flex items-center gap-1">
+          <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => router.push("/settings")} aria-label="设置">
+            <span className="material-symbols-outlined text-[22px]">settings</span>
+          </button>
           <button className="p-2 active:scale-90" style={{ color: "rgba(255,255,255,0.7)" }} onClick={() => setShowPresets(true)}>
             <span className="material-symbols-outlined text-[22px]">tune</span>
           </button>
