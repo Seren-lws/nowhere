@@ -132,12 +132,25 @@ export function IntimateChat() {
       const msgRes = await fetch(`/api/bedroom/messages?sessionId=${id}`);
       const dbMsgs = await msgRes.json();
       if (Array.isArray(dbMsgs) && dbMsgs.length > 0) {
-        const chatMsgs: ChatMessage[] = dbMsgs.map((m: { id: string; role: string; content: string; created_at: string }) => ({
-          role: m.role as ChatMessage["role"],
-          content: m.content,
-          ts: new Date(m.created_at).getTime(),
-          dbId: m.id,
-        }));
+        const chatMsgs: ChatMessage[] = dbMsgs.map((m: { id: string; role: string; content: string; created_at: string }) => {
+          const msg: ChatMessage = {
+            role: m.role as ChatMessage["role"],
+            content: m.content,
+            ts: new Date(m.created_at).getTime(),
+            dbId: m.id,
+          };
+          // 记忆卡片：把存的 JSON 还原成 memories，否则重载后会显示成原始 JSON
+          if (m.role === "memory") {
+            try {
+              const parsed = JSON.parse(m.content);
+              if (parsed.memories) {
+                msg.memories = parsed.memories;
+                msg.content = "";
+              }
+            } catch {}
+          }
+          return msg;
+        });
         setMessages(chatMsgs);
       } else {
         // New session — show greeting
