@@ -216,8 +216,10 @@ export function Bedroom() {
         <button
           className="p-2 transition-colors active:scale-90"
           style={{ color: "rgba(255,255,255,0.8)" }}
+          onClick={() => router.push("/settings")}
+          aria-label="设置"
         >
-          <span className="material-symbols-outlined">more_vert</span>
+          <span className="material-symbols-outlined">settings</span>
         </button>
       </header>
 

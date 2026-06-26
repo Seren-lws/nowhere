@@ -289,16 +289,15 @@ function CompanionBubble({ status }: { status: CompanionStatus }) {
       >
         {status.status_text}
       </div>
-      {/* Q版小人 */}
-      <img
-        src="/floorplan/companion.png"
-        alt="他"
+      {/* 他——一团会呼吸的光点 */}
+      <div
         style={{
-          width: 220,
-          height: 220,
-          objectFit: "contain",
+          width: 54,
+          height: 54,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 50% 42%, #ffffff 0%, #ffe9e8 34%, #ffdad9 58%, rgba(236,187,186,0.35) 80%, transparent 100%)",
           animation: "gentle-float 5s ease-in-out 1s infinite",
-          filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.15))",
         }}
       />
     </div>
