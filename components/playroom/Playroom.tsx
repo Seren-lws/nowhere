@@ -49,8 +49,8 @@ export function Playroom() {
   const ready = settings ? isChatReady(settings) : false;
   const himName = profile.companionName || "裴斯年";
 
-  /** 让他用自己的口吻解说这一竿 */
-  const narrate = async (o: CastOutcome): Promise<string> => {
+  /** 让他用自己的口吻解说这一竿（带上前几竿的经过，保持连续性） */
+  const narrate = async (o: CastOutcome, recent: string[]): Promise<string> => {
     if (!settings) return "";
     let what: string;
     if (o.kind === "fish") {
@@ -60,13 +60,16 @@ export function Playroom() {
     } else {
       what = "这一竿落了空，什么都没钓到。";
     }
+    const recentBlock = recent.length > 0
+      ? `\n\n【你们刚才钓鱼的经过（从旧到新，自然地接着说，可以呼应前面）】\n${recent.join("\n")}`
+      : "";
     const sys = `你是${himName}，她的恋人——温柔里带点痞气，偶尔傲娇。你正和她一起在你们家的池塘边钓鱼，气氛慵懒惬意。
-用你的口吻对这一竿说一两句话（口语、自然、简短，不超过30字），像真的在她身边边钓边聊。不要用括号写动作，不要解释，直接说话。`;
+用你的口吻对这一竿说一两句话（口语、自然、简短，不超过30字），像真的在她身边边钓边聊。不要用括号写动作，不要解释，直接说话。${recentBlock}`;
     try {
       const resp = await sendChat(
         [
           { role: "system", content: sys },
-          { role: "user", content: `${what}\n你会说什么？` },
+          { role: "user", content: `这一竿：${what}\n你会说什么？` },
         ],
         settings,
       );
@@ -74,6 +77,29 @@ export function Playroom() {
     } catch {
       return "";
     }
+  };
+
+  /** 钓到稀有以上、且是第一次钓到这种鱼时，记进他的记忆 */
+  const recordCatchMemory = (o: CastOutcome, who: "me" | "him") => {
+    if (o.kind !== "fish" || !o.firstTime) return;
+    if (!["rare", "epic", "legendary"].includes(o.fish.rarity)) return;
+    const rl = RARITY_LABEL[o.fish.rarity];
+    const content = who === "me"
+      ? `在娱乐室陪她钓鱼，她钓到了一条「${o.fish.name}」（${rl}级），是第一次钓到这种，她特别开心。`
+      : `在娱乐室陪她一起钓鱼，我钓到了一条「${o.fish.name}」（${rl}级），是第一次钓到这种，她在旁边也跟着雀跃。`;
+    fetch("/api/fishing/memory", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        content,
+        tags: ["钓鱼", "娱乐室", o.fish.name],
+        baseUrl: settings?.baseUrl,
+        apiKey: settings?.apiKey,
+        embeddingModel: settings?.embeddingModel,
+      }),
+    }).catch(() => {});
+    setToast(`✨ 第一次钓到${o.fish.name}！${himName}把这一刻记下了`);
+    setTimeout(() => setToast(null), 2800);
   };
 
   const doCast = async (who: "me" | "him") => {
@@ -84,6 +110,11 @@ export function Playroom() {
       return;
     }
     setBusy(who);
+
+    // 这一竿之前的经过，给他的解说做连续性
+    const recent = stateRef.current.log
+      .slice(-5)
+      .map((l) => `${l.who === "me" ? "她" : "你"}：${l.text}${l.remark ? `（你当时说：${l.remark}）` : ""}`);
 
     const next = structuredClone(stateRef.current);
     const outcome = cast(next);
@@ -97,8 +128,11 @@ export function Playroom() {
     saveFishing(next);
     setState(next);
 
+    // 钓到稀有以上的好鱼，记进他的记忆（不论谁钓的，都是你们一起的回忆）
+    recordCatchMemory(outcome, who);
+
     if (who === "him") {
-      const remark = await narrate(outcome);
+      const remark = await narrate(outcome, recent);
       if (remark) {
         const after = structuredClone(stateRef.current);
         const target = after.log.find((l) => l.ts === entry.ts);
