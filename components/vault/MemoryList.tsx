@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "@/lib/supabase";
+import { loadSettings } from "@/lib/brain/config";
 import type { MemoryItem } from "@/lib/brain/db";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ const FILTERS = [
   { key: "promise", label: "约定" },
   { key: "preference", label: "喜好" },
   { key: "habit", label: "习惯" },
+  { key: "relationship", label: "关系" },
 ];
 
 function timeAgo(ts: string): string {
@@ -35,6 +37,33 @@ function timeAgo(ts: string): string {
   if (hours > 0) return `${hours}小时前`;
   if (mins > 0) return `${mins}分钟前`;
   return "刚刚";
+}
+
+async function refreshEmbedding(id: string, content: string) {
+  try {
+    const settings = loadSettings();
+    if (!settings.apiKey || !settings.embeddingModel) return;
+    await supabase.from("memory_items").update({ embedding: null }).eq("id", id);
+    const res = await fetch("/api/embedding", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text: content,
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+        model: settings.embeddingModel,
+      }),
+    });
+    const data = await res.json();
+    if (data.embedding) {
+      await supabase
+        .from("memory_items")
+        .update({ embedding: JSON.stringify(data.embedding) })
+        .eq("id", id);
+    }
+  } catch {
+    // fire-and-forget: backfill 会兜底
+  }
 }
 
 function getValenceStyle(v: number | null) {
@@ -115,6 +144,7 @@ export function MemoryList() {
     setMemories((prev) =>
       prev.map((m) => (m.id === editingId ? { ...m, content: editContent } : m)),
     );
+    refreshEmbedding(editingId, editContent);
     setEditingId(null);
   };
 
@@ -134,6 +164,7 @@ export function MemoryList() {
       .single();
     if (data) {
       setMemories((prev) => [data, ...prev]);
+      refreshEmbedding(data.id, data.content);
     }
     setAddContent("");
     setAddTags("");

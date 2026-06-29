@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "@/lib/supabase";
+import { loadSettings } from "@/lib/brain/config";
 import type { MemoryItem } from "@/lib/brain/db";
 
 const TAG_COLORS: Record<string, string> = {
@@ -15,6 +16,33 @@ const TAG_COLORS: Record<string, string> = {
   工作: "rgba(104,91,91,0.5)",
   关系: "rgba(186,26,26,0.4)",
 };
+
+async function refreshEmbedding(id: string, content: string) {
+  try {
+    const settings = loadSettings();
+    if (!settings.apiKey || !settings.embeddingModel) return;
+    await supabase.from("memory_items").update({ embedding: null }).eq("id", id);
+    const res = await fetch("/api/embedding", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text: content,
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+        model: settings.embeddingModel,
+      }),
+    });
+    const data = await res.json();
+    if (data.embedding) {
+      await supabase
+        .from("memory_items")
+        .update({ embedding: JSON.stringify(data.embedding) })
+        .eq("id", id);
+    }
+  } catch {
+    // fire-and-forget: backfill 会兜底
+  }
+}
 
 function getDotColor(tags: string[]): string {
   for (const t of tags) {
@@ -87,6 +115,7 @@ export function ProfileView() {
         m.id === editingId ? { ...m, content: editContent, tags } : m,
       ),
     );
+    refreshEmbedding(editingId, editContent);
     setEditingId(null);
   };
 
@@ -117,7 +146,10 @@ export function ProfileView() {
       })
       .select("*")
       .single();
-    if (data) setProfiles((prev) => [data, ...prev]);
+    if (data) {
+      setProfiles((prev) => [data, ...prev]);
+      refreshEmbedding(data.id, data.content);
+    }
     setNewContent("");
     setNewTags("");
     setShowAdd(false);

@@ -94,6 +94,7 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
       await Promise.all([
         supabase.from("memory_items").delete().neq("id", ""),
         supabase.from("gardener_logs").delete().neq("id", ""),
+        supabase.from("timeline_events").delete().neq("id", ""),
       ]);
     } catch {
       // ignore
@@ -330,7 +331,7 @@ export function MemoryShell({ children }: { children: React.ReactNode }) {
                   color: "var(--text-mid)",
                 }}
               >
-                这会删除所有记忆、档案和园丁日志，操作不可撤销。
+                这会删除所有记忆、档案、园丁日志和时间线，操作不可撤销。
               </p>
               <div className="flex gap-3">
                 <button
